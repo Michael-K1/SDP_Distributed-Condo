@@ -5,10 +5,11 @@ package mk1.sdp.REST.Services;
 import mk1.sdp.REST.Resources.Complex;
 import mk1.sdp.REST.Resources.Home;
 
+
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.security.Provider;
+
 
 
 @Path("/complex")
@@ -17,6 +18,8 @@ public class ComplexService {
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     public Response serviceGetHouseComplex(){
+        System.out.println("sono dentro");
+        System.out.println("sono dentro");
         return Response.ok(Complex.getInstance(),  MediaType.APPLICATION_JSON).build();
     }
 

@@ -4,13 +4,11 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>EnergyManager</groupId>
+    <groupId>sdp</groupId>
     <artifactId>project_HouseComplex</artifactId>
     <version>1.0-SNAPSHOT</version>
 
     <dependencies>
-
-
         <dependency>
             <groupId>javax.annotation</groupId>
             <artifactId>javax.annotation-api</artifactId>
@@ -26,39 +24,45 @@
 
 
         <!-- GRPC -->
+              <dependency>
+                  <groupId>io.grpc</groupId>
+                  <artifactId>grpc-core</artifactId>
+                  <version>1.9.1</version>
+              </dependency>
+              <dependency>
+                  <groupId>io.grpc</groupId>
+                  <artifactId>grpc-netty</artifactId>
+                  <version>1.9.1</version>
+              </dependency>
+              <dependency>
+                  <groupId>io.grpc</groupId>
+                  <artifactId>grpc-protobuf</artifactId>
+                  <version>1.9.1</version>
+              </dependency>
+              <dependency>
+                  <groupId>io.grpc</groupId>
+                  <artifactId>grpc-stub</artifactId>
+                  <version>1.9.1</version>
+              </dependency>
+              <dependency>
+                  <groupId>io.grpc</groupId>
+                  <artifactId>grpc-okhttp</artifactId>
+                  <version>1.9.1</version>
+              </dependency>
+        <!-- REST   new jersey (client) -->
         <dependency>
-            <groupId>io.grpc</groupId>
-            <artifactId>grpc-core</artifactId>
-            <version>1.9.1</version>
-        </dependency>
-        <dependency>
-            <groupId>io.grpc</groupId>
-            <artifactId>grpc-netty</artifactId>
-            <version>1.9.1</version>
-        </dependency>
-        <dependency>
-            <groupId>io.grpc</groupId>
-            <artifactId>grpc-protobuf</artifactId>
-            <version>1.9.1</version>
-        </dependency>
-        <dependency>
-            <groupId>io.grpc</groupId>
-            <artifactId>grpc-stub</artifactId>
-            <version>1.9.1</version>
-        </dependency>
-        <dependency>
-            <groupId>io.grpc</groupId>
-            <artifactId>grpc-okhttp</artifactId>
-            <version>1.9.1</version>
-        </dependency>
-
-
-        <!-- REST      -->
-        <dependency>
-            <groupId>com.sun.jersey</groupId>
+            <groupId>org.glassfish.jersey.core</groupId>
             <artifactId>jersey-client</artifactId>
-            <version>1.19.4</version>
+            <version>2.25.1</version>
         </dependency>
+        <dependency>
+            <groupId>org.glassfish.jersey.media</groupId>
+            <artifactId>jersey-media-json-jackson</artifactId>
+            <version>2.25.1</version>
+        </dependency>
+
+        <!-- REST    old jersey (server) -->
+
         <dependency>
             <groupId>com.sun.jersey</groupId>
             <artifactId>jersey-server</artifactId>
@@ -71,16 +75,13 @@
         </dependency>
         <dependency>
             <groupId>com.sun.jersey</groupId>
-            <artifactId>jersey-servlet</artifactId>
-            <version>1.19.4</version>
-        </dependency>
-        <dependency>
-            <groupId>com.sun.jersey</groupId>
             <artifactId>jersey-json</artifactId>
             <version>1.19.4</version>
         </dependency>
 
     </dependencies>
+
+
 
     <build>
         <extensions>
@@ -111,9 +112,9 @@
                     <pluginArtifact>io.grpc:protoc-gen-grpc-java:1.9.1:exe:${os.detected.classifier}</pluginArtifact>
 
                     <protoSourceRoot>${basedir}/src/main/proto</protoSourceRoot><!-- to set the protobuf source directory-->
-<!--                    <outputDirectory>-->
-<!--                        <javaOutputDirectory>${basedir}/src/Proto/java</javaOutputDirectory>-->
-<!--                    </outputDirectory>-->
+                    <!--                    <outputDirectory>-->
+                    <!--                        <javaOutputDirectory>${basedir}/src/Proto/java</javaOutputDirectory>-->
+                    <!--                    </outputDirectory>-->
                 </configuration>
                 <executions>
                     <execution>

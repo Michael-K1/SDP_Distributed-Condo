@@ -2,6 +2,7 @@ package mk1.sdp.REST.Resources;
 
 
 
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -12,7 +13,7 @@ public class Home {
     private List<Measure> measureList;
 
     public Home(){
-        measureList=new ArrayList<Measure>();
+        measureList= new ArrayList<>();
     }
 
     public synchronized boolean AddMeasure(Measure m){
@@ -21,20 +22,17 @@ public class Home {
     }
 
 
-    public List<Measure> getLastN(int n){
+    public ArrayList<Measure> getLastN(int n){
         List<Measure> copy;
         synchronized (measureList){
-            copy=new ArrayList<Measure>(measureList);
+            copy= new ArrayList<>(measureList);
         }
 
-        return copy.subList(copy.size() - Math.min(copy.size(), n), copy.size());   //the minimum between n and list.size() --> if n >list.size there would be IndexOutOfBoundException
+        return new ArrayList<>(copy.subList(copy.size() - Math.min(copy.size(), n), copy.size()));   //the minimum between n and list.size() --> if n >list.size there would be IndexOutOfBoundException
     }
 
     //TODO add measurements to the list
 
-    public class Measure{
-        public int timestampFromMidnight;
-        public double measure;
-    }
+
 
 }

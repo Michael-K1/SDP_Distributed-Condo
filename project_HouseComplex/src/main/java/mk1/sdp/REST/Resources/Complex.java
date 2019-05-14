@@ -16,8 +16,8 @@ public class Complex {
 
     @XmlElement(name = "HouseList")
     public Hashtable<Integer,Home> complex;
-
-    private List<Home.Measure> complexStat;      //TODO check with the measurements once created the peerToPeer
+    @XmlElement(name = "Global_Stat_List")
+    private List<Measure> complexStat;      //TODO check with the measurements once created the peerToPeer
     private static Complex instance;
 
 
@@ -28,8 +28,8 @@ public class Complex {
     }
 
     private Complex(){
-        complex=new Hashtable<Integer,Home>();
-        complexStat=new ArrayList<Home.Measure>();
+        complex= new Hashtable<>();
+        complexStat= new ArrayList<>();
     }
     //region REST REQUEST
 
@@ -61,7 +61,7 @@ public class Complex {
     }
 
     //GET
-    public synchronized List<Home.Measure> getLastHomeStat(int ID, int n){  //synced to avoid deletion or insertion attempt while retreaving the list of statistics
+    public synchronized List<Measure> getLastHomeStat(int ID, int n){  //synced to avoid deletion or insertion attempt while retreaving the list of statistics
 
       return complex.get(ID).getLastN(n);
 
@@ -70,7 +70,7 @@ public class Complex {
     //GET
     public Pair<Double, Double> getHomeMeanDev(int ID, int n){
 
-        List<Home.Measure> measurement;
+        List<Measure> measurement;
         synchronized (complex){                                         //synced to take the most updated copy of the stats of the house (also synced inside getLastN) without occupying the OBJ for too long
             measurement=complex.get(ID).getLastN(n);
         }
@@ -80,13 +80,13 @@ public class Complex {
     }
 
     //GET
-    public  List<Home.Measure> getLastGlobalStat(int n){
-        List<Home.Measure> copy;
+    public  ArrayList<Measure> getLastGlobalStat(int n){
+        List<Measure> copy;
         synchronized (complexStat){                                     //synced to take the most updated copy of the stats of the complex without occupying the OBJ for too long
-            copy=new ArrayList<>(complexStat);
+            copy= new ArrayList<>(complexStat);
         }
 
-        return copy.subList(copy.size()- Math.min(copy.size(), n), copy.size());
+        return new ArrayList<>(copy.subList(copy.size() - Math.min(copy.size(), n), copy.size()));
     }
 
     //GET
@@ -98,11 +98,11 @@ public class Complex {
 
     //endregion
 
-    private Pair<Double, Double> calculateMeanDeviation(List<Home.Measure> m){
+    private Pair<Double, Double> calculateMeanDeviation(List<Measure> m){
         double mean=0,deviation=0;
 
         //mean
-        for (Home.Measure measure : m) {
+        for (Measure measure : m) {
             mean += measure.measure;
         }
         mean= mean/m.size();
@@ -110,13 +110,13 @@ public class Complex {
         double temp=0;
 
         //deviation
-        for (Home.Measure measure : m) {
+        for (Measure measure : m) {
             temp+=Math.pow(measure.measure-mean, 2);
         }
 
         deviation=Math.sqrt(temp/m.size());
 
-        return new Pair<Double, Double>(mean,deviation);
+        return new Pair<>(mean, deviation);
     }
 
 }
