@@ -3,6 +3,8 @@ package mk1.sdp.REST.Resources;
 
 
 
+import mk1.sdp.misc.Pair;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -10,20 +12,22 @@ public class Home {
     public int HomeID;
     public String address;
     public int listeningPort;
-    private List<Measure> measureList;
+
+    private List<Pair<Integer,Double>> measureList; //pair: first=timestampFromMidnight, second=measure
 
     public Home(){
         measureList= new ArrayList<>();
     }
 
-    public synchronized boolean AddMeasure(Measure m){
+
+    public synchronized boolean AddMeasure(Pair<Integer,Double> m){
         measureList.add(m);
         return measureList.contains(m);
     }
 
 
-    public ArrayList<Measure> getLastN(int n){
-        List<Measure> copy;
+    public ArrayList<Pair<Integer,Double>> getLastN(int n){
+        List<Pair<Integer,Double>> copy;
         synchronized (measureList){
             copy= new ArrayList<>(measureList);
         }

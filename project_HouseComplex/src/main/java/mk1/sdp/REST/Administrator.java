@@ -1,11 +1,10 @@
 package mk1.sdp.REST;
 
 import mk1.sdp.REST.Resources.Complex;
-import mk1.sdp.REST.Resources.Measure;
-
+import mk1.sdp.REST.Resources.Home;
+import mk1.sdp.misc.Pair;
 
 import org.glassfish.jersey.client.ClientConfig;
-import org.glassfish.jersey.internal.sonar.SonarJerseyCommon;
 import org.jetbrains.annotations.NotNull;
 
 import javax.ws.rs.client.Client;
@@ -13,14 +12,11 @@ import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import javax.ws.rs.core.UriBuilder;
 
 import java.net.URI;
 
 import java.net.URISyntaxException;
-import java.util.InputMismatchException;
-import java.util.NoSuchElementException;
-import java.util.Scanner;
+import java.util.*;
 
 
 public class Administrator {
@@ -42,7 +38,7 @@ public class Administrator {
 
         ClientConfig c=new ClientConfig();
 
-        client= ClientBuilder.newClient();
+        client= ClientBuilder.newClient(c);
         webTarget=client.target(getBaseURI());
     }
 
@@ -125,17 +121,21 @@ public class Administrator {
     //region REST QUERY
     private void getHouseList() {
 
-        WebTarget rootPath = webTarget.path("complex");
+        WebTarget wt = webTarget.path("complex");
 
 
-        Response response= rootPath.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).get();
-        if(!checkResponse(response)) return;
+        Response response= wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).get();
+        if(responseHasError(response)) return;
 
         printHigh("output from server: ");
 
         Complex comp= response.readEntity(Complex.class);
-        print(  comp.complex.toString());
-        print(  "dim "+comp.complex.size());
+
+        print(  "Houses in Complex: "+comp.complex.size());
+
+        for(Home h: comp.complex.values()){
+            print("ID:"+h.HomeID+"\n\t Host: "+h.address+"\n\t Port: "+h.listeningPort);
+        }
 
     }
 
@@ -154,8 +154,17 @@ public class Administrator {
         }while(n<0);
 
         //WebResource rootPath = webResource.path("/complex/local/stat?id="+id+"_n="+n);
+         WebTarget wt=webTarget.path("/complex/local/stat?id="+id+"_n="+n);
+         Response response = wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).get();
+         if(responseHasError(response)) return;
 
+        Pair[] mes=response.readEntity(Pair[].class);
 
+        printHigh("output from server: ");
+
+        for(Pair m:mes){
+            print("val "+m.second );
+        }
 
     }
 
@@ -172,18 +181,18 @@ public class Administrator {
     }
     //endregion
 
-
-    private boolean checkResponse(@NotNull Response resp){
+    private boolean responseHasError(@NotNull Response resp){
 
         if(resp.getStatus()!=200){
             printErr("failed with HTTP error code: "+resp.getStatus());
             String error=resp.readEntity(String.class);
             printErr(error);
-            return false;
+            return true;
 
         }
-        return true;
+        return false;
     }
+
 
 
 

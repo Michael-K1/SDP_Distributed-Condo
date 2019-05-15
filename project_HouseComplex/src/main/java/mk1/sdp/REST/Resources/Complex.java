@@ -17,7 +17,7 @@ public class Complex {
     @XmlElement(name = "HouseList")
     public Hashtable<Integer,Home> complex;
     @XmlElement(name = "Global_Stat_List")
-    private List<Measure> complexStat;      //TODO check with the measurements once created the peerToPeer
+    private List<Pair<Integer,Double>> complexStat;      //TODO check with the measurements once created the peerToPeer
     private static Complex instance;
 
 
@@ -39,6 +39,7 @@ public class Complex {
 
         if(!complex.containsKey(h.HomeID)){
             complex.put(h.HomeID,h);
+            h.AddMeasure(new Pair<Integer,Double>(5,  10.0));   //todo MOCK
         }
         return complex.containsKey(h.HomeID);                           //check if the insertion has been completed
     }
@@ -61,7 +62,7 @@ public class Complex {
     }
 
     //GET
-    public synchronized List<Measure> getLastHomeStat(int ID, int n){  //synced to avoid deletion or insertion attempt while retreaving the list of statistics
+    public synchronized List<Pair<Integer,Double>> getLastHomeStat(int ID, int n){  //synced to avoid deletion or insertion attempt while retreaving the list of statistics
 
       return complex.get(ID).getLastN(n);
 
@@ -70,7 +71,7 @@ public class Complex {
     //GET
     public Pair<Double, Double> getHomeMeanDev(int ID, int n){
 
-        List<Measure> measurement;
+        List<Pair<Integer,Double>> measurement;
         synchronized (complex){                                         //synced to take the most updated copy of the stats of the house (also synced inside getLastN) without occupying the OBJ for too long
             measurement=complex.get(ID).getLastN(n);
         }
@@ -80,10 +81,10 @@ public class Complex {
     }
 
     //GET
-    public  ArrayList<Measure> getLastGlobalStat(int n){
-        List<Measure> copy;
+    public  ArrayList<Pair<Integer,Double>> getLastGlobalStat(int n){
+        List<Pair<Integer,Double>> copy;
         synchronized (complexStat){                                     //synced to take the most updated copy of the stats of the complex without occupying the OBJ for too long
-            copy= new ArrayList<>(complexStat);
+            copy= new ArrayList<Pair<Integer,Double>>(complexStat);
         }
 
         return new ArrayList<>(copy.subList(copy.size() - Math.min(copy.size(), n), copy.size()));
@@ -98,20 +99,20 @@ public class Complex {
 
     //endregion
 
-    private Pair<Double, Double> calculateMeanDeviation(List<Measure> m){
+    private Pair<Double, Double> calculateMeanDeviation(List<Pair<Integer,Double>> m){  //Pair: first=mean, second= standardDeviation
         double mean=0,deviation=0;
 
         //mean
-        for (Measure measure : m) {
-            mean += measure.measure;
+        for (Pair<Integer,Double> measure : m) {
+            mean += measure.second;
         }
         mean= mean/m.size();
 
         double temp=0;
 
         //deviation
-        for (Measure measure : m) {
-            temp+=Math.pow(measure.measure-mean, 2);
+        for (Pair<Integer,Double> measure : m) {
+            temp+=Math.pow(measure.second-mean, 2);
         }
 
         deviation=Math.sqrt(temp/m.size());
