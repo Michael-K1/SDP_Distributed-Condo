@@ -1,10 +1,15 @@
 package mk1.sdp.misc;
 
+import javax.xml.bind.annotation.XmlRootElement;
+
+@XmlRootElement
 public class Pair<M,V>{
+
     public   M first;
     public   V second;
 
     public Pair(){}     //needed for marshalling
+
 
     public Pair(M v1, V v2){
         first=v1;

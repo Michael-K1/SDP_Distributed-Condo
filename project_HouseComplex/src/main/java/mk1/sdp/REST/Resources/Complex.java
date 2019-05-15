@@ -15,9 +15,9 @@ import mk1.sdp.misc.Pair;
 public class Complex {
 
     @XmlElement(name = "HouseList")
-    public Hashtable<Integer,Home> complex;
+    public final Hashtable<Integer,Home> complex;
     @XmlElement(name = "Global_Stat_List")
-    private List<Pair<Integer,Double>> complexStat;      //TODO check with the measurements once created the peerToPeer
+    private final  List<Pair<Integer,Double>> complexStat;      //TODO check with the measurements once created the peerToPeer
     private static Complex instance;
 
 
@@ -51,25 +51,36 @@ public class Complex {
     }
 
     //PUT
-    //todo inserire la nuova statistica relativa alla casa passata (locale)
+    public boolean addLocalStat(int id, Pair<Integer,Double> measure){
+        boolean b;
+        synchronized (complex){
+           b= complex.get(id).AddMeasure(measure);
+        }
+        return b;
+    }
 
     //PUT
-    //todo inserire la nuova statistica relativa al condominio (globale)
+    public synchronized boolean addGlobalStat(Pair<Integer,Double> measure){
 
+
+         complexStat.add(measure);
+         return complexStat.contains(measure);
+    }
     //GET
     public Home getHouse(int id){
         return complex.get(id);
     }
 
     //GET
-    public synchronized List<Pair<Integer,Double>> getLastHomeStat(int ID, int n){  //synced to avoid deletion or insertion attempt while retreaving the list of statistics
+    public synchronized List<Pair<Integer,Double>> getLastLocalStat(int ID, int n){  //synced to avoid deletion or insertion attempt while retreaving the list of statistics
+        if(!complex.containsKey(ID)) return null;
 
-      return complex.get(ID).getLastN(n);
+        return complex.get(ID).getLastN(n);
 
     }
 
     //GET
-    public Pair<Double, Double> getHomeMeanDev(int ID, int n){
+    public Pair<Double, Double> getLocalMeanDev(int ID, int n){
 
         List<Pair<Integer,Double>> measurement;
         synchronized (complex){                                         //synced to take the most updated copy of the stats of the house (also synced inside getLastN) without occupying the OBJ for too long
