@@ -17,7 +17,7 @@ import java.net.URI;
 
 import java.net.URISyntaxException;
 import java.util.*;
-
+//https://jersey.github.io/apidocs/2.25.1/jersey/index.html
 
 public class Administrator {
     private Client client=null;
@@ -77,17 +77,87 @@ public class Administrator {
 
         }
     }
+
+
+
+
+    //region REST QUERY
+    private void getHouseList() {
+
+        WebTarget wt = webTarget.path("complex");
+
+
+        Response response= wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).get();
+        if(responseHasError(response)) return;
+
+        printHigh("output from server: ");
+
+        Complex comp= response.readEntity(Complex.class);
+
+        print(  "Houses in Complex: "+comp.complex.size());
+
+        for(Home h: comp.complex.values()){
+            print("ID:"+h.HomeID+"\n\t Host: "+h.address+"\n\t Port: "+h.listeningPort);
+        }
+        response.close();
+
+    }
+
+
+    private void getLastLocalN() {
+        Pair<Integer, Integer> p = askParam(true);
+
+
+        WebTarget wt=webTarget.path("/complex/house/stat").queryParam("id", p.first).queryParam("n", p.second);
+         Response response = wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).get();
+         if(responseHasError(response)) return;
+
+         printStatistics(response,p.first);
+
+        response.close();
+    }
+
+    private void getLastGlobalN() {
+        Pair<Integer, Integer> p = askParam(false);
+
+        WebTarget wt=webTarget.path("/complex/global/stat").queryParam("n", p.second);
+        Response response = wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).get();
+        if(responseHasError(response)) return;
+        printStatistics(response,p.first);
+        response.close();
+    }
+
+    private void getLocalMeanDev() {
+        Pair<Integer, Integer> p = askParam(true);
+        WebTarget wt=webTarget.path("/complex/house/meanDev").queryParam("id", p.first).queryParam("n", p.second);
+        Response response = wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).get();
+        if(responseHasError(response)) return;
+        printMeanDev(response,p.first);
+        response.close();
+    }
+
+    private void getGlobalMeanDev() {
+        Pair<Integer, Integer> p = askParam(false);
+        WebTarget wt=webTarget.path("/complex/global/meanDev").queryParam("n", p.second);
+        Response response = wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).get();
+        if(responseHasError(response)) return;
+        printMeanDev(response,p.first);
+        response.close();
+    }
+
+    //endregion
+
     private int printMenu(){
         int val=-1;
         do {
-            print("#############################");
+            print("\n##########################################################");
             print("Press -1- to obtain the list of the houses in the complex");
             print("Press -2- to obtain the list of the last statistics of a House");
             print("Press -3- to obtain the list of the last statistics of the complex");
             print("Press -4- to obtain the Mean and Standard Deviation of the last N statistics of a house");
             print("Press -5- to obtain the Mean and Standard Deviation of the last N statistics of  the complex");
             print("Press -0- to close the administrator client");
-            print("#############################\n");
+            print("##########################################################\n");
             val= readInput("input must be between 0 and 5");
 
         }while(val<0||val>5);
@@ -115,71 +185,24 @@ public class Administrator {
         return val;
     }
 
+    private Pair<Integer,Integer> askParam(boolean isHouse) {
+        int id = -1;
+        int n = 0;
 
+        if(isHouse) {
 
-
-    //region REST QUERY
-    private void getHouseList() {
-
-        WebTarget wt = webTarget.path("complex");
-
-
-        Response response= wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).get();
-        if(responseHasError(response)) return;
-
-        printHigh("output from server: ");
-
-        Complex comp= response.readEntity(Complex.class);
-
-        print(  "Houses in Complex: "+comp.complex.size());
-
-        for(Home h: comp.complex.values()){
-            print("ID:"+h.HomeID+"\n\t Host: "+h.address+"\n\t Port: "+h.listeningPort);
+            do {
+                print("Insert the ID of the house:\n");
+                id = readInput("input cannot be negative...");
+            } while (id < 0);
         }
 
-    }
-
-
-    private void getLastLocalN() {
-        int id=-1;
-        int n=0;
-        do{
-            print("Insert the ID of the house:\n");
-            id=readInput("input cannot be negative...");
-        }while(id<0);
-
-        do{
+        do {
             print("Insert the number of wanted statistics :\n");
-            n=readInput("input cannot be negative...");
-        }while(n<0);
-
-        //WebResource rootPath = webResource.path("/complex/local/stat?id="+id+"_n="+n);
-         WebTarget wt=webTarget.path("/complex/local/stat?id="+id+"_n="+n);
-         Response response = wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).get();
-         if(responseHasError(response)) return;
-
-        Pair[] mes=response.readEntity(Pair[].class);
-
-        printHigh("output from server: ");
-
-        for(Pair m:mes){
-            print("val "+m.second );
-        }
-
+            n = readInput("input cannot be negative...");
+        } while (n < 0);
+        return new Pair<>(id,n);
     }
-
-    private void getLastGlobalN() {
-
-    }
-
-    private void getLocalMeanDev() {
-
-    }
-
-    private void getGlobalMeanDev() {
-
-    }
-    //endregion
 
     private boolean responseHasError(@NotNull Response resp){
 
@@ -195,11 +218,41 @@ public class Administrator {
 
 
 
+    private void printStatistics(Response resp, int id){
+        String pretty=    id==-1?"the Complex :":"House "+id+":";
+        String prettyErr= id==-1?"The Complex":"This House";
 
-    //easyPrint
+        Pair[] mes=resp.readEntity(Pair[].class);
+
+        try{
+            printHigh("output from server: ");
+            print("Last "+mes.length+" statistics of "+pretty);
+            for(Pair m:mes){
+                print("Time: "+m.first+" --> "+m.second+" kW"); //todo pretty print time
+            }
+
+        }catch(NullPointerException e){
+            printErr(prettyErr+" hasn't any statistics so far...");
+        }
+    }
+private void printMeanDev(Response response, int id){
+    String pretty=    id==-1?"the Complex":"House "+id;
+    String prettyErr= id==-1?"Complex":"House "+id;
+
+    Pair meanDev = response.readEntity(Pair.class);
+    try{
+        printHigh("output from server: ");
+        print("The mean and standard deviation of "+pretty+" are:"
+                +"\n\t Mean= "+meanDev.first
+                +"\n\t StdDev= "+meanDev.second);
+
+    }catch(NullPointerException e){
+        printErr("The "+prettyErr+" hasn't any statistics for the calculation yet...");
+    }
+}
+    //region easyPrint
     private void printErr(String s){ System.err.println("[ERROR]: "+s.toUpperCase()+"...");}
     private void printHigh(String s){ System.out.println("[ADMIN]: "+s.toUpperCase());}
     private void print(String s){ System.out.println(s);}
-
-
+    //endregion
 }
