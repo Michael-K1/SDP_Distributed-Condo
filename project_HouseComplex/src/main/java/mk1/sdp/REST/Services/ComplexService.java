@@ -18,8 +18,7 @@ public class ComplexService {
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     public Response serviceGetHouseComplex(){
-        System.out.println("sono dentro");
-        System.out.println("sono dentro");
+
         return Response.ok(Complex.getInstance(),  MediaType.APPLICATION_JSON).build();
     }
 
@@ -34,9 +33,9 @@ public class ComplexService {
         return Response.status(Response.Status.CONFLICT).build();
     }
 
-    @Path("/delete?{id}")
+    @Path("/delete")
     @DELETE
-    public Response serviceDeleteHouse(@PathParam("id") int id){
+    public Response serviceDeleteHouse(@QueryParam("id") int id){
         if(Complex.getInstance().deleteHouse(id)){
             return Response.ok().build();
         }
@@ -44,25 +43,25 @@ public class ComplexService {
 
     }
     //region HOUSE SERVICES
-    @Path("/house?{id}")
+    @Path("/house")
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    public Response serviceGetHouse(@PathParam("id") int id){
+    public Response serviceGetHouse(@QueryParam("id") int id){
         return Response.ok(Complex.getInstance().getHouse(id), MediaType.APPLICATION_JSON).build();
     }
 
-    @Path("/local/stat?id={id}_n={n}")
+    @Path("/local/stat")
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    public Response serviceGetLastNLocalStat(@PathParam("id") int id, @PathParam("n") int n){
+    public Response serviceGetLastNLocalStat(@QueryParam("id") int id, @QueryParam("n") int n){
         return Response.ok(Complex.getInstance().getLastHomeStat(id,n),MediaType.APPLICATION_JSON).build();
 
     }
 
-    @Path("/local/meanDev?id={id}_n={n}")
+    @Path("/local/meanDev")
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    public Response serviceGetLocalMeanDev(@PathParam("id") int id, @PathParam("n") int n){
+    public Response serviceGetLocalMeanDev(@QueryParam("id") int id, @QueryParam("n") int n){
         return Response.ok(Complex.getInstance().getHomeMeanDev(id,n),MediaType.APPLICATION_JSON).build();
 
     }
@@ -71,17 +70,17 @@ public class ComplexService {
 
     //region COMPLEX SERVICES
 
-    @Path("/global/stat?n={n}")
+    @Path("/global/stat")
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    public Response serviceGetLastNGlobalStat(@PathParam("n") int n){
+    public Response serviceGetLastNGlobalStat(@QueryParam("n") int n){
         return Response.ok(Complex.getInstance().getLastGlobalStat(n)).build();
     }
 
-    @Path("/global/meanDev?n={n}")
+    @Path("/global/meanDev")
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    public Response serviceGetGlobalMeanDev( @PathParam("n") int n){
+    public Response serviceGetGlobalMeanDev( @QueryParam("n") int n){
         return Response.ok(Complex.getInstance().getGlobalMeanDev(n),MediaType.APPLICATION_JSON).build();
 
     }
