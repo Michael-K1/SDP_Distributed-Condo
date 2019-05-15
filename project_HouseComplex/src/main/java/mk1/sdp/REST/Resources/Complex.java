@@ -68,6 +68,8 @@ public class Complex {
     }
     //GET
     public Home getHouse(int id){
+        if(!complex.containsKey(id)) return null;
+        
         return complex.get(id);
     }
 
@@ -84,6 +86,8 @@ public class Complex {
 
         List<Pair<Integer,Double>> measurement;
         synchronized (complex){                                         //synced to take the most updated copy of the stats of the house (also synced inside getLastN) without occupying the OBJ for too long
+            if(!complex.containsKey(ID)) return null;
+
             measurement=complex.get(ID).getLastN(n);
         }
 
