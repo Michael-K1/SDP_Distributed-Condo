@@ -2,11 +2,13 @@ package mk1.sdp.REST.Services;
 
 
 
+import com.sun.jersey.api.Responses;
 import mk1.sdp.REST.Resources.Complex;
 import mk1.sdp.REST.Resources.Home;
 import mk1.sdp.misc.Pair;
 
 
+import javax.security.auth.login.FailedLoginException;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -32,7 +34,7 @@ public class ComplexService {
         if(Complex.getInstance().addHouse(h))
             return Response.ok(Complex.getInstance().complex,  MediaType.APPLICATION_JSON).build();
 
-        return Response.status(Response.Status.CONFLICT).build();
+        return Response.status(Response.Status.CONFLICT).entity("there is already an house with ID="+h.HomeID).build();
     }
 
     @Path("/delete")
@@ -41,9 +43,10 @@ public class ComplexService {
         if(Complex.getInstance().deleteHouse(id)){
             return Response.ok().build();
         }
-        return Response.status(Response.Status.NOT_MODIFIED).build();
+        return Response.status(Response.Status.NOT_MODIFIED).entity("the house with ID="+id+" has not been removed").build();
 
     }
+
     //region HOUSE SERVICES
     @Path("/house")
     @GET
@@ -87,21 +90,35 @@ public class ComplexService {
         Pair<Response, Home> resp = checkHousePresent(id);
         if(resp.first!=null) return resp.first;
 
-        if (pair == null)return Response.status(Response.Status.PARTIAL_CONTENT).build();
+        if (pair == null) return Response.status(Response.Status.PARTIAL_CONTENT).entity("request is empty").build();
 
         Pair<Integer,Double> p = checkWellFormedPair(pair);
-        if(p==null)return Response.status(Response.Status.BAD_REQUEST).build();;
+        if(p==null)return Response.status(Response.Status.BAD_REQUEST).entity("the types of the values given are incorrect").build();;
 
         if(Complex.getInstance().addLocalStat(id,p)){
             return Response.ok().build();
         }
-        return Response.status(Response.Status.BAD_REQUEST).build();
+        return Response.status(Response.Status.NOT_ACCEPTABLE).entity("failed to add to the statistics of house with id ="+id).build();
     }
 
     //endregion
 
-    //region COMPLEX SERVICES
+    //region COMPLEX SERVICES   (GLOBAL)
+    @Path("/global/add")
+    @PUT
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response serviceAddGlobalStat(Pair pair){
+        if(pair==null) return Response.status(Response.Status.PARTIAL_CONTENT).entity("request is empty").build();
 
+
+        Pair<Integer,Double> p= checkWellFormedPair(pair);
+        if(p==null)return Response.status(Response.Status.BAD_REQUEST).entity("the types of the values given are incorrect").build();;
+
+        if(Complex.getInstance().addGlobalStat(p)){
+            return Response.ok().build();
+        }
+        return Response.status(Response.Status.NOT_ACCEPTABLE).entity("failed to add to global statistics").build();
+    }
     @Path("/global/stat")
     @GET
     @Produces(MediaType.APPLICATION_JSON)
@@ -115,25 +132,15 @@ public class ComplexService {
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     public Response serviceGetGlobalMeanDev( @QueryParam("n") int n){
-        return Response.ok(Complex.getInstance().getGlobalMeanDev(n),MediaType.APPLICATION_JSON).build();
+        Pair<Double, Double> res = Complex.getInstance().getGlobalMeanDev(n);
+
+        if (res==null)Response.status(Response.Status.PRECONDITION_FAILED).entity("there are no global statistics ").build();
+
+        return Response.ok(res,MediaType.APPLICATION_JSON).build();
 
     }
 
-    @Path("/global/add")
-    @PUT
-    @Consumes(MediaType.APPLICATION_JSON)
-    public Response serviceAddGlobalStat(Pair pair){
-        if(pair==null) return Response.status(Response.Status.PARTIAL_CONTENT).build();
 
-
-        Pair<Integer,Double> p= checkWellFormedPair(pair);
-        if(p==null)return Response.status(Response.Status.BAD_REQUEST).build();;
-
-        if(Complex.getInstance().addGlobalStat(p)){
-            return Response.ok().build();
-        }
-        return Response.status(Response.Status.NOT_ACCEPTABLE).build();
-    }
     //endregion
 
     private Pair<Integer,Double> checkWellFormedPair(Pair pair){    //checks if the input pair is well formed
@@ -148,7 +155,8 @@ public class ComplexService {
 
     private Pair<Response,Home> checkHousePresent(int id){  //check if the house is present
         Home home = Complex.getInstance().getHouse(id);
-        if(home ==null)return new Pair<>(Response.status(Response.Status.NOT_FOUND.getStatusCode(),"There is no house with ID="+id).build(),null);
+
+        if(home ==null)return new Pair<>(Response.status(Response.Status.NOT_FOUND).entity("There is no house with ID="+id).build(),null);
 
         return new Pair<>(null,home);
     }
