@@ -2,19 +2,15 @@ package mk1.sdp.REST.Services;
 
 
 
-import com.sun.jersey.api.Responses;
 import mk1.sdp.REST.Resources.Complex;
 import mk1.sdp.REST.Resources.Home;
 import mk1.sdp.misc.Pair;
 
-
-import javax.security.auth.login.FailedLoginException;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.List;
-
 
 @Path("/complex")
 public class ComplexService {
@@ -90,12 +86,10 @@ public class ComplexService {
         Pair<Response, Home> resp = checkHousePresent(id);
         if(resp.first!=null) return resp.first;
 
-        if (pair == null) return Response.status(Response.Status.PARTIAL_CONTENT).entity("request is empty").build();
+        Pair<Response,Pair<Integer,Double>> responsePairPair =checkWellFormedPair(pair);
+        if(responsePairPair.first!=null) return responsePairPair.first;
 
-        Pair<Integer,Double> p = checkWellFormedPair(pair);
-        if(p==null)return Response.status(Response.Status.BAD_REQUEST).entity("the types of the values given are incorrect").build();;
-
-        if(Complex.getInstance().addLocalStat(id,p)){
+        if(Complex.getInstance().addLocalStat(id,responsePairPair.second)){
             return Response.ok().build();
         }
         return Response.status(Response.Status.NOT_ACCEPTABLE).entity("failed to add to the statistics of house with id ="+id).build();
@@ -108,13 +102,9 @@ public class ComplexService {
     @PUT
     @Consumes(MediaType.APPLICATION_JSON)
     public Response serviceAddGlobalStat(Pair pair){
-        if(pair==null) return Response.status(Response.Status.PARTIAL_CONTENT).entity("request is empty").build();
-
-
-        Pair<Integer,Double> p= checkWellFormedPair(pair);
-        if(p==null)return Response.status(Response.Status.BAD_REQUEST).entity("the types of the values given are incorrect").build();;
-
-        if(Complex.getInstance().addGlobalStat(p)){
+        Pair<Response,Pair<Integer,Double>> responsePairPair =checkWellFormedPair(pair);
+        if(responsePairPair.first!=null) return responsePairPair.first;
+        if(Complex.getInstance().addGlobalStat(responsePairPair.second)){
             return Response.ok().build();
         }
         return Response.status(Response.Status.NOT_ACCEPTABLE).entity("failed to add to global statistics").build();
@@ -143,14 +133,21 @@ public class ComplexService {
 
     //endregion
 
-    private Pair<Integer,Double> checkWellFormedPair(Pair pair){    //checks if the input pair is well formed
+    private Pair<Response,Pair<Integer,Double>> checkWellFormedPair(Pair pair){    //checks if the input pair is well formed
+        Response resp;
+        if(pair==null) {
+            resp = Response.status(Response.Status.PARTIAL_CONTENT).entity("request is empty").build();
+            return new Pair<>(resp,null);
+        }
 
-         if(pair.first instanceof Integer && pair.second instanceof Double){
-             int v1=(Integer) pair.first;
-             double v2=(Double)pair.second;
-             return new Pair<>(v1,v2);
-         }
-         return null;
+        if(pair.first instanceof Integer && pair.second instanceof Double){
+            int v1=(Integer) pair.first;
+            double v2=(Double)pair.second;
+            return new Pair<>(null,new Pair<>(v1,v2));
+        }
+
+         resp=Response.status(Response.Status.BAD_REQUEST).entity("the types of the values given are incorrect").build();;
+         return new Pair<>(resp,null);
     }
 
     private Pair<Response,Home> checkHousePresent(int id){  //check if the house is present
