@@ -69,7 +69,7 @@ public class Complex {
     //GET
     public Home getHouse(int id){
         if(!complex.containsKey(id)) return null;
-        
+
         return complex.get(id);
     }
 
@@ -115,6 +115,8 @@ public class Complex {
     //endregion
 
     private Pair<Double, Double> calculateMeanDeviation(List<Pair<Integer,Double>> m){  //Pair: first=mean, second= standardDeviation
+        if(m.size()<=0) return null;    //no need for calculation
+
         double mean=0,deviation=0;
 
         //mean

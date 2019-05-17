@@ -1,5 +1,6 @@
 package mk1.sdp.REST;
 
+
 import mk1.sdp.REST.Resources.Complex;
 import mk1.sdp.REST.Resources.Home;
 import mk1.sdp.misc.Pair;
@@ -28,16 +29,12 @@ public class Administrator {
         Administrator admin =new Administrator();
 
         admin.Menu();
-
-
     }
 
     private Administrator(){
         fromShell=new Scanner(System.in);
 
-
         ClientConfig c=new ClientConfig();
-
         client= ClientBuilder.newClient(c);
         webTarget=client.target(getBaseURI());
     }
@@ -78,14 +75,10 @@ public class Administrator {
         }
     }
 
-
-
-
     //region REST QUERY
     private void getHouseList() {
 
         WebTarget wt = webTarget.path("complex");
-
 
         Response response= wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).get();
         if(responseHasError(response)) return;
@@ -103,16 +96,15 @@ public class Administrator {
 
     }
 
-
     private void getLastLocalN() {
         Pair<Integer, Integer> p = askParam(true);
 
 
         WebTarget wt=webTarget.path("/complex/house/stat").queryParam("id", p.first).queryParam("n", p.second);
-         Response response = wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).get();
-         if(responseHasError(response)) return;
+        Response response = wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).get();
+        if(responseHasError(response)) return;
 
-         printStatistics(response,p.first);
+        printStatistics(response,p.first);
 
         response.close();
     }
@@ -122,6 +114,7 @@ public class Administrator {
 
         WebTarget wt=webTarget.path("/complex/global/stat").queryParam("n", p.second);
         Response response = wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).get();
+
         if(responseHasError(response)) return;
         printStatistics(response,p.first);
         response.close();
@@ -129,47 +122,37 @@ public class Administrator {
 
     private void getLocalMeanDev() {
         Pair<Integer, Integer> p = askParam(true);
+
         WebTarget wt=webTarget.path("/complex/house/meanDev").queryParam("id", p.first).queryParam("n", p.second);
         Response response = wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).get();
+
         if(responseHasError(response)) return;
+
         printMeanDev(response,p.first);
         response.close();
     }
 
     private void getGlobalMeanDev() {
         Pair<Integer, Integer> p = askParam(false);
+
         WebTarget wt=webTarget.path("/complex/global/meanDev").queryParam("n", p.second);
         Response response = wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).get();
+
         if(responseHasError(response)) return;
+
         printMeanDev(response,p.first);
         response.close();
     }
 
     //endregion
 
-    private int printMenu(){
-        int val=-1;
-        do {
-            print("\n##########################################################");
-            print("Press -1- to obtain the list of the houses in the complex");
-            print("Press -2- to obtain the list of the last statistics of a House");
-            print("Press -3- to obtain the list of the last statistics of the complex");
-            print("Press -4- to obtain the Mean and Standard Deviation of the last N statistics of a house");
-            print("Press -5- to obtain the Mean and Standard Deviation of the last N statistics of  the complex");
-            print("Press -0- to close the administrator client");
-            print("##########################################################\n");
-            val= readInput("input must be between 0 and 5");
-
-        }while(val<0||val>5);
-        return val;
-    }
     private int readInput(String inputMismatch) {
         int val=-1;
 
         try {
             val=fromShell.nextInt();
 
-        } catch (InputMismatchException e){
+        } catch(InputMismatchException e){
             printErr(inputMismatch);
             fromShell.nextLine();
         }catch(NoSuchElementException e){
@@ -217,39 +200,63 @@ public class Administrator {
     }
 
 
+    //region PrettyPrint
+
+    private int printMenu(){
+        int val=-1;
+        do {
+            print("\n##########################################################");
+            print("Press -1- to obtain the list of the houses in the complex");
+            print("Press -2- to obtain the list of the last statistics of a House");
+            print("Press -3- to obtain the list of the last statistics of the complex");
+            print("Press -4- to obtain the Mean and Standard Deviation of the last N statistics of a house");
+            print("Press -5- to obtain the Mean and Standard Deviation of the last N statistics of  the complex");
+            print("Press -0- to close the administrator client");
+            print("##########################################################\n");
+            val= readInput("input must be between 0 and 5");
+
+        }while(val<0||val>5);
+        return val;
+    }
 
     private void printStatistics(Response resp, int id){
         String pretty=    id==-1?"the Complex :":"House "+id+":";
-        String prettyErr= id==-1?"The Complex":"This House";
+        String prettyErr= id==-1?"The Complex":"Thh House "+id;
 
         Pair[] mes=resp.readEntity(Pair[].class);
-
-        try{
-            printHigh("output from server: ");
-            print("Last "+mes.length+" statistics of "+pretty);
-            for(Pair m:mes){
-                print("Time: "+m.first+" --> "+m.second+" kW"); //todo pretty print time
-            }
-
-        }catch(NullPointerException e){
-            printErr(prettyErr+" hasn't any statistics so far...");
+        if(mes==null || mes.length<1){
+            print(prettyErr+" hasn't any statistics so far...");
+            return;
         }
-    }
-private void printMeanDev(Response response, int id){
-    String pretty=    id==-1?"the Complex":"House "+id;
-    String prettyErr= id==-1?"Complex":"House "+id;
 
-    Pair meanDev = response.readEntity(Pair.class);
-    try{
+        printHigh("output from server: ");
+        print("Last "+mes.length+" statistics of "+pretty);
+        for(Pair m:mes){
+            print("Time: "+m.first+" --> "+m.second+" kW"); //todo pretty print time
+        }
+
+    }
+
+    private void printMeanDev(Response response, int id){
+        String pretty=    id==-1?"the Complex":"House "+id;
+        String prettyErr= id==-1?"The Complex":"The House "+id;
+
+        Pair meanDev = response.readEntity(Pair.class);
+
+
+        if (meanDev==null || !(meanDev.first instanceof Double) || !(meanDev.second instanceof Double)){
+            print(prettyErr + " hasn't any statistics for the calculation yet...");
+            return;
+        }
+
         printHigh("output from server: ");
         print("The mean and standard deviation of "+pretty+" are:"
                 +"\n\t Mean= "+meanDev.first
                 +"\n\t StdDev= "+meanDev.second);
 
-    }catch(NullPointerException e){
-        printErr("The "+prettyErr+" hasn't any statistics for the calculation yet...");
     }
-}
+    //endregion
+
     //region easyPrint
     private void printErr(String s){ System.err.println("[ERROR]: "+s.toUpperCase()+"...");}
     private void printHigh(String s){ System.out.println("[ADMIN]: "+s.toUpperCase());}
