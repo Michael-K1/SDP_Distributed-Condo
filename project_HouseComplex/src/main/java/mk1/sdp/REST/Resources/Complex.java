@@ -39,7 +39,7 @@ public class Complex {
 
         if(!complex.containsKey(h.HomeID)){
             complex.put(h.HomeID,h);
-            h.AddMeasure(new Pair<Integer,Double>(5,  10.0));   //todo MOCK
+            h.AddMeasure(Pair.of(5,  10.0d));   //todo MOCK
         }
         return complex.containsKey(h.HomeID);                           //check if the insertion has been completed
     }
@@ -134,7 +134,7 @@ public class Complex {
 
         deviation=Math.sqrt(temp/m.size());
 
-        return new Pair<>(mean, deviation);
+        return Pair.of(mean, deviation);
     }
 
 }

@@ -104,6 +104,7 @@ public class ComplexService {
     public Response serviceAddGlobalStat(Pair pair){
         Pair<Response,Pair<Integer,Double>> responsePairPair =checkWellFormedPair(pair);
         if(responsePairPair.first!=null) return responsePairPair.first;
+
         if(Complex.getInstance().addGlobalStat(responsePairPair.second)){
             return Response.ok().build();
         }
@@ -153,9 +154,9 @@ public class ComplexService {
     private Pair<Response,Home> checkHousePresent(int id){  //check if the house is present
         Home home = Complex.getInstance().getHouse(id);
 
-        if(home ==null)return new Pair<>(Response.status(Response.Status.NOT_FOUND).entity("There is no house with ID="+id).build(),null);
+        if(home ==null)return Pair.of(Response.status(Response.Status.NOT_FOUND).entity("There is no house with ID="+id).build(),null);
 
-        return new Pair<>(null,home);
+        return Pair.of(null,home);
     }
 
 

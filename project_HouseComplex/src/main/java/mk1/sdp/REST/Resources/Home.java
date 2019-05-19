@@ -19,6 +19,11 @@ public class Home {
         measureList= new ArrayList<>();
     }
 
+    public Home(int homeID,String address,int listeningPort){
+        this.HomeID=homeID;
+        this.address=address;
+        this.listeningPort=listeningPort;
+    }
 
     public synchronized boolean AddMeasure(Pair<Integer,Double> m){
         measureList.add(m);
@@ -35,7 +40,7 @@ public class Home {
         return new ArrayList<>(copy.subList(copy.size() - Math.min(copy.size(), n), copy.size()));   //the minimum between n and list.size() --> if n >list.size there would be IndexOutOfBoundException
     }
 
-    //TODO add measurements to the list
+
 
 
 

@@ -184,7 +184,7 @@ public class Administrator {
             print("Insert the number of wanted statistics :\n");
             n = readInput("input cannot be negative...");
         } while (n < 0);
-        return new Pair<>(id,n);
+        return Pair.of(id,n);
     }
 
     private boolean responseHasError(@NotNull Response resp){

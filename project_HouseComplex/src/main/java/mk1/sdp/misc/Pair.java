@@ -25,4 +25,9 @@ public class Pair<M,V>{
         Pair pair = (Pair) o;
         return this.first.equals(pair.first) && this.second.equals(pair.second);
     }
+	
+	public static <M,V> Pair<M,V> of(M left, V right){
+
+        return new Pair<>(left, right);
+    }
 }
