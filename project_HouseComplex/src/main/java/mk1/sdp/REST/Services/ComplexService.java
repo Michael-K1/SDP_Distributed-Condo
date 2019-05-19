@@ -27,9 +27,14 @@ public class ComplexService {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public Response serviceAddHouse(Home h){
-        if(Complex.getInstance().addHouse(h))
-            return Response.ok(Complex.getInstance().complex,  MediaType.APPLICATION_JSON).build();
 
+        if(Complex.getInstance().addHouse(h)) {
+            ArrayList<Home> copy;
+            synchronized (Complex.getInstance().complex){                       //synced to obtain the most recent copy of houses in the NETWORK
+                copy=new ArrayList<>(Complex.getInstance().complex.values());
+            }
+            return Response.ok(copy, MediaType.APPLICATION_JSON).build();
+        }
         return Response.status(Response.Status.CONFLICT).entity("there is already an house with ID="+h.HomeID).build();
     }
 
