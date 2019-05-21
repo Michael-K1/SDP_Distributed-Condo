@@ -4,15 +4,18 @@ package mk1.sdp.REST;
 import mk1.sdp.REST.Resources.Complex;
 import mk1.sdp.REST.Resources.Home;
 import mk1.sdp.misc.Pair;
+import mk1.sdp.misc.EasyPrinter;
 
 import org.glassfish.jersey.client.ClientConfig;
 import org.jetbrains.annotations.NotNull;
 
+import javax.ws.rs.ProcessingException;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+
 
 import java.net.URI;
 
@@ -67,7 +70,7 @@ public class Administrator {
                     break;
                 case 5: getGlobalMeanDev();
                     break;
-                default:printHigh("closing the client...");
+                default:EasyPrinter.printHigh("closing the client...");
                         fromShell.close();      //closing the input stream before leaving
                         return;
             }
@@ -80,17 +83,21 @@ public class Administrator {
 
         WebTarget wt = webTarget.path("complex");
 
-        Response response= wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).get();
+//        Response response= wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).get();
+        Response response= obtainResponse(wt);
+
+        if(response==null)return;
+
         if(responseHasError(response)) return;
 
-        printHigh("output from server: ");
+        EasyPrinter.printHigh("output from server: ");
 
         Complex comp= response.readEntity(Complex.class);
 
-        print(  "Houses in Complex: "+comp.complex.size());
+        EasyPrinter.print(  "Houses in Complex: "+comp.complex.size());
 
         for(Home h: comp.complex.values()){
-            print("ID:"+h.HomeID+"\n\t Host: "+h.address+"\n\t Port: "+h.listeningPort);
+            EasyPrinter.print("ID:"+h.HomeID+"\n\t Host: "+h.address+"\n\t Port: "+h.listeningPort);
         }
         response.close();
 
@@ -99,9 +106,10 @@ public class Administrator {
     private void getLastLocalN() {
         Pair<Integer, Integer> p = askParam(true);
 
-
         WebTarget wt=webTarget.path("/complex/house/stat").queryParam("id", p.first).queryParam("n", p.second);
-        Response response = wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).get();
+        Response response= obtainResponse(wt);
+        if(response==null)return;
+
         if(responseHasError(response)) return;
 
         printStatistics(response,p.first);
@@ -113,7 +121,10 @@ public class Administrator {
         Pair<Integer, Integer> p = askParam(false);
 
         WebTarget wt=webTarget.path("/complex/global/stat").queryParam("n", p.second);
-        Response response = wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).get();
+
+        Response response= obtainResponse(wt);
+        if(response==null)return;
+
 
         if(responseHasError(response)) return;
         printStatistics(response,p.first);
@@ -124,7 +135,8 @@ public class Administrator {
         Pair<Integer, Integer> p = askParam(true);
 
         WebTarget wt=webTarget.path("/complex/house/meanDev").queryParam("id", p.first).queryParam("n", p.second);
-        Response response = wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).get();
+        Response response= obtainResponse(wt);
+        if(response==null)return;
 
         if(responseHasError(response)) return;
 
@@ -136,7 +148,8 @@ public class Administrator {
         Pair<Integer, Integer> p = askParam(false);
 
         WebTarget wt=webTarget.path("/complex/global/meanDev").queryParam("n", p.second);
-        Response response = wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).get();
+        Response response= obtainResponse(wt);
+        if(response==null)return;
 
         if(responseHasError(response)) return;
 
@@ -153,13 +166,13 @@ public class Administrator {
             val=fromShell.nextInt();
 
         } catch(InputMismatchException e){
-            printErr(inputMismatch);
+            EasyPrinter.printErr(inputMismatch);
             fromShell.nextLine();
         }catch(NoSuchElementException e){
-            printErr("malfunction with the scanner");
+            EasyPrinter.printErr("malfunction with the scanner");
             fromShell.nextLine();
         }catch(IllegalStateException e){
-            printErr("scanner closed.\n attempt to reopen it...");
+            EasyPrinter.printErr("scanner closed.\n attempt to reopen it...");
             fromShell=new Scanner(System.in);
             fromShell.nextLine();
 
@@ -175,24 +188,35 @@ public class Administrator {
         if(isHouse) {
 
             do {
-                print("Insert the ID of the house:\n");
+                EasyPrinter.print("Insert the ID of the house:\n");
                 id = readInput("input cannot be negative...");
             } while (id < 0);
         }
 
         do {
-            print("Insert the number of wanted statistics :\n");
+            EasyPrinter.print("Insert the number of wanted statistics :\n");
             n = readInput("input cannot be negative...");
         } while (n < 0);
         return Pair.of(id,n);
     }
 
+    private Response obtainResponse(WebTarget wt){
+        Response response=null;
+        try {
+            response = wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).get();
+        }catch(ProcessingException e){
+            EasyPrinter.printErr("connection refused from server.\n try again...");
+            return null;
+        }
+        return response;
+    }
+
     private boolean responseHasError(@NotNull Response resp){
 
         if(resp.getStatus()!=200){
-            printErr("failed with HTTP error code: "+resp.getStatus());
+            EasyPrinter.printErr("failed with HTTP error code: "+resp.getStatus());
             String error=resp.readEntity(String.class);
-            printErr(error);
+            EasyPrinter.printErr(error);
             return true;
 
         }
@@ -205,14 +229,14 @@ public class Administrator {
     private int printMenu(){
         int val=-1;
         do {
-            print("\n##########################################################");
-            print("Press -1- to obtain the list of the houses in the complex");
-            print("Press -2- to obtain the list of the last statistics of a House");
-            print("Press -3- to obtain the list of the last statistics of the complex");
-            print("Press -4- to obtain the Mean and Standard Deviation of the last N statistics of a house");
-            print("Press -5- to obtain the Mean and Standard Deviation of the last N statistics of  the complex");
-            print("Press -0- to close the administrator client");
-            print("##########################################################\n");
+            EasyPrinter.print("\n##########################################################");
+            EasyPrinter.print("Press -1- to obtain the list of the houses in the complex");
+            EasyPrinter.print("Press -2- to obtain the list of the last statistics of a House");
+            EasyPrinter.print("Press -3- to obtain the list of the last statistics of the complex");
+            EasyPrinter.print("Press -4- to obtain the Mean and Standard Deviation of the last N statistics of a house");
+            EasyPrinter.print("Press -5- to obtain the Mean and Standard Deviation of the last N statistics of  the complex");
+            EasyPrinter.print("Press -0- to close the administrator client");
+            EasyPrinter.print("##########################################################\n");
             val= readInput("input must be between 0 and 5");
 
         }while(val<0||val>5);
@@ -225,14 +249,14 @@ public class Administrator {
 
         Pair[] mes=resp.readEntity(Pair[].class);
         if(mes==null || mes.length<1){
-            print(prettyErr+" hasn't any statistics so far...");
+            EasyPrinter.print(prettyErr+" hasn't any statistics so far...");
             return;
         }
 
-        printHigh("output from server: ");
-        print("Last "+mes.length+" statistics of "+pretty);
+        EasyPrinter.printHigh("output from server: ");
+        EasyPrinter.print("Last "+mes.length+" statistics of "+pretty);
         for(Pair m:mes){
-            print("Time: "+m.first+" --> "+m.second+" kW"); //todo pretty print time
+            EasyPrinter.print("Time: "+m.first+" --> "+m.second+" kW"); //todo pretty print time
         }
 
     }
@@ -245,21 +269,17 @@ public class Administrator {
 
 
         if (meanDev==null || !(meanDev.first instanceof Double) || !(meanDev.second instanceof Double)){
-            print(prettyErr + " hasn't any statistics for the calculation yet...");
+            EasyPrinter.print(prettyErr + " hasn't any statistics for the calculation yet...");
             return;
         }
 
-        printHigh("output from server: ");
-        print("The mean and standard deviation of "+pretty+" are:"
+        EasyPrinter.printHigh("output from server: ");
+        EasyPrinter.print("The mean and standard deviation of "+pretty+" are:"
                 +"\n\t Mean= "+meanDev.first
                 +"\n\t StdDev= "+meanDev.second);
 
     }
     //endregion
 
-    //region easyPrint
-    private void printErr(String s){ System.err.println("[ERROR]: "+s.toUpperCase()+"...");}
-    private void printHigh(String s){ System.out.println("[ADMIN]: "+s.toUpperCase());}
-    private void print(String s){ System.out.println(s);}
-    //endregion
+
 }

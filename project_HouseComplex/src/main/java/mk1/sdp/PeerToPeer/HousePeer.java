@@ -2,6 +2,7 @@ package mk1.sdp.PeerToPeer;
 
 import mk1.sdp.REST.Resources.Home;
 import mk1.sdp.misc.Pair;
+import mk1.sdp.misc.EasyPrinter;
 
 import org.glassfish.jersey.client.ClientConfig;
 import org.jetbrains.annotations.NotNull;
@@ -33,9 +34,9 @@ public class HousePeer {
         HousePeer peer =  new HousePeer(2, "localhost", 5050, "http://localhost:1337");
 
        if( peer.registerToServer())
-          peer.print("sono dentro");
+          EasyPrinter.print("sono dentro");
        else{
-           peer.client.close();
+           peer.closeConnection();
        }
     }
 
@@ -58,14 +59,15 @@ public class HousePeer {
             return false;
 
         }
+
         Home[] h=resp.readEntity(Home[].class);
 
-        print("case:"+h.length );
+        EasyPrinter.print("case:"+h.length );
         for(Home x :h){
-            print(x.HomeID+"");
+            EasyPrinter.print(x.HomeID+"");
         }
 
-
+        
         resp.close();
         return true;
 
@@ -84,21 +86,21 @@ public class HousePeer {
         return uri;
     }
 
+    private void closeConnection(){
+        client.close();
+    }
+
     private boolean responseHasError(@NotNull Response resp){
 
         if(resp.getStatus()!=200){
-            printErr("failed with HTTP error code: "+resp.getStatus());
+            EasyPrinter.printErr("failed with HTTP error code: "+resp.getStatus());
             String error=resp.readEntity(String.class);
-            printErr(error);
+            EasyPrinter.printErr(error);
             return true;
 
         }
         return false;
     }
 
-    //region easyPrint
-    private void printErr(String s){ System.err.println("[ERROR]: "+s.toUpperCase()+"...");}
-    private void printHigh(String s){ System.out.println("[ADMIN]: "+s.toUpperCase());}
-    private void print(String s){ System.out.println(s);}
-    //endregion
+
 }
