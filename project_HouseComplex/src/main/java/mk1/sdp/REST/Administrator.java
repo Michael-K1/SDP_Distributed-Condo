@@ -4,10 +4,10 @@ package mk1.sdp.REST;
 import mk1.sdp.REST.Resources.Complex;
 import mk1.sdp.REST.Resources.Home;
 import mk1.sdp.misc.Pair;
-import mk1.sdp.misc.EasyPrinter;
+import mk1.sdp.misc.Common;
 
 import org.glassfish.jersey.client.ClientConfig;
-import org.jetbrains.annotations.NotNull;
+
 
 import javax.ws.rs.ProcessingException;
 import javax.ws.rs.client.Client;
@@ -21,6 +21,11 @@ import java.net.URI;
 
 import java.net.URISyntaxException;
 import java.util.*;
+
+import static mk1.sdp.misc.Common.responseHasError;
+import static mk1.sdp.misc.Common.print;
+import static mk1.sdp.misc.Common.printErr;
+import static mk1.sdp.misc.Common.printHigh;
 //https://jersey.github.io/apidocs/2.25.1/jersey/index.html
 
 public class Administrator {
@@ -70,7 +75,8 @@ public class Administrator {
                     break;
                 case 5: getGlobalMeanDev();
                     break;
-                default:EasyPrinter.printHigh("closing the client...");
+                default:
+                        printHigh("closing the client...");
                         fromShell.close();      //closing the input stream before leaving
                         return;
             }
@@ -90,14 +96,14 @@ public class Administrator {
 
         if(responseHasError(response)) return;
 
-        EasyPrinter.printHigh("output from server: ");
+        printHigh("output from server: ");
 
         Complex comp= response.readEntity(Complex.class);
 
-        EasyPrinter.print(  "Houses in Complex: "+comp.complex.size());
+        print(  "Houses in Complex: "+comp.complex.size());
 
         for(Home h: comp.complex.values()){
-            EasyPrinter.print("ID:"+h.HomeID+"\n\t Host: "+h.address+"\n\t Port: "+h.listeningPort);
+            print("ID:"+h.HomeID+"\n\t Host: "+h.address+"\n\t Port: "+h.listeningPort);
         }
         response.close();
 
@@ -166,13 +172,13 @@ public class Administrator {
             val=fromShell.nextInt();
 
         } catch(InputMismatchException e){
-            EasyPrinter.printErr(inputMismatch);
+            printErr(inputMismatch);
             fromShell.nextLine();
         }catch(NoSuchElementException e){
-            EasyPrinter.printErr("malfunction with the scanner");
+            printErr("malfunction with the scanner");
             fromShell.nextLine();
         }catch(IllegalStateException e){
-            EasyPrinter.printErr("scanner closed.\n attempt to reopen it...");
+            printErr("scanner closed.\n attempt to reopen it...");
             fromShell=new Scanner(System.in);
             fromShell.nextLine();
 
@@ -188,39 +194,37 @@ public class Administrator {
         if(isHouse) {
 
             do {
-                EasyPrinter.print("Insert the ID of the house:\n");
-                id = readInput("input cannot be negative...");
+                print("Insert the ID of the house:\n");
+                id = readInput("input must be of positive digit");
             } while (id < 0);
         }
 
         do {
-            EasyPrinter.print("Insert the number of wanted statistics :\n");
-            n = readInput("input cannot be negative...");
+            print("Insert the number of wanted statistics :\n");
+            n = readInput("input must be of positive digit");
         } while (n < 0);
         return Pair.of(id,n);
     }
 
-    private Response obtainResponse(WebTarget wt){
+    private Response obtainResponse(WebTarget wt, int ...retries){
         Response response=null;
         try {
             response = wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).get();
         }catch(ProcessingException e){
-            EasyPrinter.printErr("connection refused from server.\n try again...");
-            return null;
+            if(retries.length==0){
+                printErr("Connection refused by server.\tretrying..."); //todo mettere una sleep?
+                return obtainResponse(wt,1);
+            }
+            if (retries[0]<5) {
+                printErr("Connection refused by server.\tretrying...");
+                return obtainResponse(wt,retries[0]+1);
+            }
+            else {
+                printErr("unable to connect to server.\n try again later...");
+                return null;
+            }
         }
         return response;
-    }
-
-    private boolean responseHasError(@NotNull Response resp){
-
-        if(resp.getStatus()!=200){
-            EasyPrinter.printErr("failed with HTTP error code: "+resp.getStatus());
-            String error=resp.readEntity(String.class);
-            EasyPrinter.printErr(error);
-            return true;
-
-        }
-        return false;
     }
 
 
@@ -229,14 +233,14 @@ public class Administrator {
     private int printMenu(){
         int val=-1;
         do {
-            EasyPrinter.print("\n##########################################################");
-            EasyPrinter.print("Press -1- to obtain the list of the houses in the complex");
-            EasyPrinter.print("Press -2- to obtain the list of the last statistics of a House");
-            EasyPrinter.print("Press -3- to obtain the list of the last statistics of the complex");
-            EasyPrinter.print("Press -4- to obtain the Mean and Standard Deviation of the last N statistics of a house");
-            EasyPrinter.print("Press -5- to obtain the Mean and Standard Deviation of the last N statistics of  the complex");
-            EasyPrinter.print("Press -0- to close the administrator client");
-            EasyPrinter.print("##########################################################\n");
+            print("\n##########################################################");
+            print("Press -1- to obtain the list of the houses in the complex");
+            print("Press -2- to obtain the list of the last statistics of a House");
+            print("Press -3- to obtain the list of the last statistics of the complex");
+            print("Press -4- to obtain the Mean and Standard Deviation of the last N statistics of a house");
+            print("Press -5- to obtain the Mean and Standard Deviation of the last N statistics of  the complex");
+            print("Press -0- to close the administrator client");
+            print("##########################################################\n");
             val= readInput("input must be between 0 and 5");
 
         }while(val<0||val>5);
@@ -249,14 +253,14 @@ public class Administrator {
 
         Pair[] mes=resp.readEntity(Pair[].class);
         if(mes==null || mes.length<1){
-            EasyPrinter.print(prettyErr+" hasn't any statistics so far...");
+            print(prettyErr+" hasn't any statistics so far...");
             return;
         }
 
-        EasyPrinter.printHigh("output from server: ");
-        EasyPrinter.print("Last "+mes.length+" statistics of "+pretty);
+        printHigh("output from server: ");
+        print("Last "+mes.length+" statistics of "+pretty);
         for(Pair m:mes){
-            EasyPrinter.print("Time: "+m.first+" --> "+m.second+" kW"); //todo pretty print time
+            print("Time: "+m.first+" --> "+m.second+" kW"); //todo pretty print time
         }
 
     }
@@ -269,12 +273,12 @@ public class Administrator {
 
 
         if (meanDev==null || !(meanDev.first instanceof Double) || !(meanDev.second instanceof Double)){
-            EasyPrinter.print(prettyErr + " hasn't any statistics for the calculation yet...");
+            print(prettyErr + " hasn't any statistics for the calculation yet...");
             return;
         }
 
-        EasyPrinter.printHigh("output from server: ");
-        EasyPrinter.print("The mean and standard deviation of "+pretty+" are:"
+        printHigh("output from server: ");
+        print("The mean and standard deviation of "+pretty+" are:"
                 +"\n\t Mean= "+meanDev.first
                 +"\n\t StdDev= "+meanDev.second);
 
