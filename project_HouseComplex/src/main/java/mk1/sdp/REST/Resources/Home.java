@@ -13,7 +13,7 @@ public class Home {
     public String address;
     public int listeningPort;
 
-    private final List<Pair<Long,Double>> measureList; //pair: left=timestampFromMidnight, right=measure
+    private  List<Pair<Long,Double>> measureList; //pair: left=timestampFromMidnight, right=measure
 
     public Home(){
         measureList= new ArrayList<>();
@@ -41,7 +41,9 @@ public class Home {
         return new ArrayList<>(copy.subList(copy.size() - Math.min(copy.size(), n), copy.size()));   //the minimum between n and list.size() --> if n >list.size there would be IndexOutOfBoundException
     }
 
-
+    public void eraseMeasurementList(){
+        measureList=null;
+    }
 
 
 

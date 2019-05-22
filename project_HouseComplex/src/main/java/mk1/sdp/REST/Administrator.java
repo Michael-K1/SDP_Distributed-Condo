@@ -25,6 +25,7 @@ import static mk1.sdp.misc.Common.responseHasError;
 import static mk1.sdp.misc.Common.print;
 import static mk1.sdp.misc.Common.printErr;
 import static mk1.sdp.misc.Common.printHigh;
+import static mk1.sdp.misc.Common.readInputInteger;
 //https://jersey.github.io/apidocs/2.25.1/jersey/index.html
 
 public class Administrator {
@@ -50,7 +51,7 @@ public class Administrator {
         URI uri=null;
 
         try {
-            uri = new URI("http://localhost:1337/");
+            uri = new URI("http://"+RESTServer.HOST+":"+RESTServer.PORT+"/");
         }catch (URISyntaxException e) {
             e.printStackTrace();
         }
@@ -164,27 +165,7 @@ public class Administrator {
 
     //endregion
 
-    private int readInput(String inputMismatch) {
-        int val=-1;
 
-        try {
-            val=fromShell.nextInt();
-
-        } catch(InputMismatchException e){
-            printErr(inputMismatch);
-            fromShell.nextLine();
-        }catch(NoSuchElementException e){
-            printErr("malfunction with the scanner");
-            fromShell.nextLine();
-        }catch(IllegalStateException e){
-            printErr("scanner closed.\n attempt to reopen it...");
-            fromShell=new Scanner(System.in);
-            fromShell.nextLine();
-
-        }
-
-        return val;
-    }
 
     private Pair<Integer,Integer> askParam(boolean isHouse) {
         int id = -1;
@@ -194,13 +175,13 @@ public class Administrator {
 
             do {
                 print("Insert the ID of the house:\n");
-                id = readInput("input must be of positive digit");
+                id = readInputInteger(fromShell,"input must be of positive digit");
             } while (id < 0);
         }
 
         do {
             print("Insert the number of wanted statistics :\n");
-            n = readInput("input must be of positive digit");
+            n = readInputInteger(fromShell,"input must be of positive digit");
         } while (n < 0);
         return Pair.of(id,n);
     }
@@ -240,7 +221,7 @@ public class Administrator {
             print("Press -5- to obtain the Mean and Standard Deviation of the last N statistics of  the complex");
             print("Press -0- to close the administrator client");
             print("##########################################################\n");
-            val= readInput("input must be between 0 and 5");
+            val= readInputInteger(fromShell,"input must be between 0 and 5");
 
         }while(val<0||val>5);
         return val;

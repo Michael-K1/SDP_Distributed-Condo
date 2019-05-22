@@ -33,10 +33,13 @@ public class ComplexService {
             synchronized (Complex.getInstance().complex){                       //synced to obtain the most recent copy of houses in the NETWORK
                 copy=new ArrayList<>(Complex.getInstance().complex.values());
             }
+            copy=removeStatistics(copy);
             return Response.ok(copy, MediaType.APPLICATION_JSON).build();
         }
         return Response.status(Response.Status.CONFLICT).entity("there is already an house with ID="+h.HomeID).build();
     }
+
+
 
     @Path("/delete")
     @DELETE
@@ -143,17 +146,17 @@ public class ComplexService {
         Response resp;
         if(pair==null) {
             resp = Response.status(Response.Status.PARTIAL_CONTENT).entity("request is empty").build();
-            return new Pair<>(resp,null);
+            return Pair.of(resp,null );
         }
 
         if(pair.left instanceof Integer && pair.right instanceof Double){
             long v1=((Integer) pair.left).longValue();
             double v2=(Double)pair.right;
-            return new Pair<>(null,new Pair<>(v1,v2));
+            return Pair.of(null, Pair.of(v1,v2));
         }
 
-         resp=Response.status(Response.Status.BAD_REQUEST).entity("the types of the values given are incorrect").build();;
-         return new Pair<>(resp,null);
+        resp=Response.status(Response.Status.BAD_REQUEST).entity("the types of the values given are incorrect").build();;
+        return Pair.of(resp,null );
     }
 
     private Pair<Response,Home> checkHousePresent(int id){  //check if the house is present
@@ -164,5 +167,9 @@ public class ComplexService {
         return Pair.of(null,home);
     }
 
+    private ArrayList<Home> removeStatistics(ArrayList<Home> copy) {
 
+        copy.forEach(Home::eraseMeasurementList);
+        return copy;
+    }
 }

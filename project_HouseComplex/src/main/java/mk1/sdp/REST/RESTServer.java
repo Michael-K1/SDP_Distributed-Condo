@@ -9,7 +9,7 @@ import java.io.IOException;
 public class RESTServer {
 
     public static final String HOST = "localhost";
-    public static final int PORT = 1337;
+    public static final int PORT = 9421;
 
 
     public static void main(String[] args)  {

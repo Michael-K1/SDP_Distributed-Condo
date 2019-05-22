@@ -3,6 +3,9 @@ package mk1.sdp.misc;
 import org.jetbrains.annotations.NotNull;
 
 import javax.ws.rs.core.Response;
+import java.util.InputMismatchException;
+import java.util.NoSuchElementException;
+import java.util.Scanner;
 
 public class Common {
 
@@ -22,6 +25,26 @@ public class Common {
         return false;
     }
 
+    public static int readInputInteger(Scanner fromShell, String inputMismatch) {
+        int val=-1;
 
+        try {
+            val=fromShell.nextInt();
+
+        } catch(InputMismatchException e){
+            printErr(inputMismatch);
+            fromShell.nextLine();
+        }catch(NoSuchElementException e){
+            printErr("malfunction with the scanner");
+            fromShell.nextLine();
+        }catch(IllegalStateException e){
+            printErr("scanner closed.\n attempt to reopen it...");
+            fromShell=new Scanner(System.in);
+            fromShell.nextLine();
+
+        }
+
+        return val;
+    }
 
 }
