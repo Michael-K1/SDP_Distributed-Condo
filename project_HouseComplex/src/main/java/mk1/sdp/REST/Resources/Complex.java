@@ -37,10 +37,12 @@ public class Complex {
     public synchronized boolean addHouse (Home h){                      //synced to avoid double insertion attempt
 
 
-        if(!complex.containsKey(h.HomeID)){
-            complex.put(h.HomeID,h);
-            h.AddMeasure(Pair.of(5,  10.0d));   //todo MOCK
+        if(complex.containsKey(h.HomeID)) {
+            return false;
         }
+        complex.put(h.HomeID,h);
+        h.AddMeasure(Pair.of(5,  10.0d));   //todo MOCK
+
         return complex.containsKey(h.HomeID);                           //check if the insertion has been completed
     }
 
