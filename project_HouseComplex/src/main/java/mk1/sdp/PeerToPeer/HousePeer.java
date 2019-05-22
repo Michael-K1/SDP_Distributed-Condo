@@ -1,8 +1,13 @@
 package mk1.sdp.PeerToPeer;
 
+import io.grpc.ManagedChannel;
+import io.grpc.ManagedChannelBuilder;
+
+import mk1.sdp.REST.RESTServer;
 import mk1.sdp.REST.Resources.Home;
 import mk1.sdp.misc.Pair;
 import mk1.sdp.misc.Common;
+import static mk1.sdp.misc.Common.responseHasError;
 
 import org.glassfish.jersey.client.ClientConfig;
 
@@ -20,9 +25,6 @@ import java.net.URISyntaxException;
 import java.util.Hashtable;
 import java.util.Random;
 
-import static mk1.sdp.misc.Common.responseHasError;
-
-
 public class HousePeer {
     public final int ID;
     public final String host;
@@ -31,7 +33,7 @@ public class HousePeer {
     private Client client;
     public WebTarget webTarget;
 
-    public Hashtable<Integer, Pair<?,?>> peerList ; //TODO decidere da cosa è composta la coppia, se da channel(GRPC) e/o socket(solo protobuf)
+    public Hashtable<Integer, ManagedChannel> peerList ; //TODO decidere da cosa è composta la coppia, se da channel(GRPC) e/o socket(solo protobuf)
 
 
     public  static void main (String[] args){
@@ -88,7 +90,8 @@ public class HousePeer {
 
         Common.print("case:"+h.length );
         for(Home x :h){
-            Common.print(x.HomeID+"");
+            ManagedChannel channel = ManagedChannelBuilder.forAddress(x.address, x.listeningPort).usePlaintext(true).build();
+            peerList.put(x.HomeID,channel);
         }
 
         resp.close();
@@ -102,7 +105,7 @@ public class HousePeer {
         URI uri=null;
 
         try {
-            uri = new URI("http://localhost:1337/");
+            uri = new URI("http://"+ RESTServer.HOST+":"+RESTServer.PORT+"/");
         }catch (URISyntaxException e) {
             e.printStackTrace();
         }
