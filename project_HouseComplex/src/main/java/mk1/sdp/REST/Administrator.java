@@ -4,7 +4,6 @@ package mk1.sdp.REST;
 import mk1.sdp.REST.Resources.Complex;
 import mk1.sdp.REST.Resources.Home;
 import mk1.sdp.misc.Pair;
-import mk1.sdp.misc.Common;
 
 import org.glassfish.jersey.client.ClientConfig;
 
@@ -112,13 +111,13 @@ public class Administrator {
     private void getLastLocalN() {
         Pair<Integer, Integer> p = askParam(true);
 
-        WebTarget wt=webTarget.path("/complex/house/stat").queryParam("id", p.first).queryParam("n", p.second);
+        WebTarget wt=webTarget.path("/complex/house/stat").queryParam("id", p.left).queryParam("n", p.right);
         Response response= obtainResponse(wt);
         if(response==null)return;
 
         if(responseHasError(response)) return;
 
-        printStatistics(response,p.first);
+        printStatistics(response,p.left);
 
         response.close();
     }
@@ -126,40 +125,40 @@ public class Administrator {
     private void getLastGlobalN() {
         Pair<Integer, Integer> p = askParam(false);
 
-        WebTarget wt=webTarget.path("/complex/global/stat").queryParam("n", p.second);
+        WebTarget wt=webTarget.path("/complex/global/stat").queryParam("n", p.right);
 
         Response response= obtainResponse(wt);
         if(response==null)return;
 
 
         if(responseHasError(response)) return;
-        printStatistics(response,p.first);
+        printStatistics(response,p.left);
         response.close();
     }
 
     private void getLocalMeanDev() {
         Pair<Integer, Integer> p = askParam(true);
 
-        WebTarget wt=webTarget.path("/complex/house/meanDev").queryParam("id", p.first).queryParam("n", p.second);
+        WebTarget wt=webTarget.path("/complex/house/meanDev").queryParam("id", p.left).queryParam("n", p.right);
         Response response= obtainResponse(wt);
         if(response==null)return;
 
         if(responseHasError(response)) return;
 
-        printMeanDev(response,p.first);
+        printMeanDev(response,p.left);
         response.close();
     }
 
     private void getGlobalMeanDev() {
         Pair<Integer, Integer> p = askParam(false);
 
-        WebTarget wt=webTarget.path("/complex/global/meanDev").queryParam("n", p.second);
+        WebTarget wt=webTarget.path("/complex/global/meanDev").queryParam("n", p.right);
         Response response= obtainResponse(wt);
         if(response==null)return;
 
         if(responseHasError(response)) return;
 
-        printMeanDev(response,p.first);
+        printMeanDev(response,p.left);
         response.close();
     }
 
@@ -260,7 +259,7 @@ public class Administrator {
         printHigh("output from server: ");
         print("Last "+mes.length+" statistics of "+pretty);
         for(Pair m:mes){
-            print("Time: "+m.first+" --> "+m.second+" kW"); //todo pretty print time
+            print("Time: "+m.left +" --> "+m.right +" kW"); //todo pretty print time
         }
 
     }
@@ -272,15 +271,15 @@ public class Administrator {
         Pair meanDev = response.readEntity(Pair.class);
 
 
-        if (meanDev==null || !(meanDev.first instanceof Double) || !(meanDev.second instanceof Double)){
+        if (meanDev==null || !(meanDev.left instanceof Double) || !(meanDev.right instanceof Double)){
             print(prettyErr + " hasn't any statistics for the calculation yet...");
             return;
         }
 
         printHigh("output from server: ");
         print("The mean and standard deviation of "+pretty+" are:"
-                +"\n\t Mean= "+meanDev.first
-                +"\n\t StdDev= "+meanDev.second);
+                +"\n\t Mean= "+meanDev.left
+                +"\n\t StdDev= "+meanDev.right);
 
     }
     //endregion

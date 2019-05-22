@@ -4,6 +4,7 @@ import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
+
 import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.List;
@@ -17,9 +18,9 @@ public class Complex {
     @XmlElement(name = "HouseList")
     public final Hashtable<Integer,Home> complex;
     @XmlElement(name = "Global_Stat_List")
-    private final  List<Pair<Integer,Double>> complexStat;      //TODO check with the measurements once created the peerToPeer
+    private final  List<Pair<Long,Double>> complexStat;      //TODO check with the measurements once created the peerToPeer
     private static Complex instance;
-
+    private final Hashtable<Integer,Home> suspendedHouse;
 
     public static Complex getInstance(){
         if(instance==null)
@@ -29,31 +30,42 @@ public class Complex {
 
     private Complex(){
         complex= new Hashtable<>();
+        suspendedHouse= new Hashtable<>();
+
         complexStat= new ArrayList<>();
     }
     //region REST REQUEST
 
     //POST
-    public synchronized boolean addHouse (Home h){                      //synced to avoid double insertion attempt
+    public synchronized boolean addHouse (Home h) {                      //synced to avoid double insertion attempt
 
 
-        if(complex.containsKey(h.HomeID)) {
+        if (complex.containsKey(h.HomeID)) {
             return false;
         }
-        complex.put(h.HomeID,h);
-        h.AddMeasure(Pair.of(5,  10.0d));   //todo MOCK
 
-        return complex.containsKey(h.HomeID);                           //check if the insertion has been completed
+        if (suspendedHouse.containsKey(h.HomeID)) {
+            complex.put(h.HomeID, suspendedHouse.remove(h.HomeID));
+
+        } else{
+            complex.put(h.HomeID, h);
+            h.AddMeasure(Pair.of(5L, 10.0d));   //todo MOCK
+
+
+        }
+        return complex.containsKey(h.HomeID);               //check if the insertion has been completed
     }
 
     //DELETE
     public synchronized boolean deleteHouse(int id){                    //synced to avoid concurrent access while deleting a house
-        complex.remove(id);
-        return complex.containsKey(id);
+        suspendedHouse.put(id,complex.remove(id));
+       // complex.remove(id);
+
+        return !complex.containsKey(id);
     }
 
     //PUT
-    public boolean addLocalStat(int id, Pair<Integer,Double> measure){
+    public boolean addLocalStat(int id, Pair<Long,Double> measure){
         boolean b;
         synchronized (complex){
            b= complex.get(id).AddMeasure(measure);
@@ -62,7 +74,7 @@ public class Complex {
     }
 
     //PUT
-    public synchronized boolean addGlobalStat(Pair<Integer,Double> measure){
+    public synchronized boolean addGlobalStat(Pair<Long,Double> measure){
 
 
          complexStat.add(measure);
@@ -76,7 +88,7 @@ public class Complex {
     }
 
     //GET
-    public synchronized List<Pair<Integer,Double>> getLastLocalStat(int ID, int n){  //synced to avoid deletion or insertion attempt while retreaving the list of statistics
+    public synchronized List<Pair<Long,Double>> getLastLocalStat(int ID, int n){  //synced to avoid deletion or insertion attempt while retreaving the list of statistics
         if(!complex.containsKey(ID)) return null;
 
         return complex.get(ID).getLastN(n);
@@ -86,7 +98,7 @@ public class Complex {
     //GET
     public Pair<Double, Double> getLocalMeanDev(int ID, int n){
 
-        List<Pair<Integer,Double>> measurement;
+        List<Pair<Long,Double>> measurement;
         synchronized (complex){                                         //synced to take the most updated copy of the stats of the house (also synced inside getLastN) without occupying the OBJ for too long
             if(!complex.containsKey(ID)) return null;
 
@@ -98,10 +110,10 @@ public class Complex {
     }
 
     //GET
-    public  ArrayList<Pair<Integer,Double>> getLastGlobalStat(int n){
-        List<Pair<Integer,Double>> copy;
+    public  ArrayList<Pair<Long,Double>> getLastGlobalStat(int n){
+        List<Pair<Long,Double>> copy;
         synchronized (complexStat){                                     //synced to take the most updated copy of the stats of the complex without occupying the OBJ for too long
-            copy= new ArrayList<Pair<Integer,Double>>(complexStat);
+            copy= new ArrayList<Pair<Long,Double>>(complexStat);
         }
 
         return new ArrayList<>(copy.subList(copy.size() - Math.min(copy.size(), n), copy.size()));
@@ -116,22 +128,22 @@ public class Complex {
 
     //endregion
 
-    private Pair<Double, Double> calculateMeanDeviation(List<Pair<Integer,Double>> m){  //Pair: first=mean, second= standardDeviation
+    private Pair<Double, Double> calculateMeanDeviation(List<Pair<Long,Double>> m){  //Pair: left=mean, right= standardDeviation
         if(m.size()<=0) return null;    //no need for calculation
 
         double mean=0,deviation=0;
 
         //mean
-        for (Pair<Integer,Double> measure : m) {
-            mean += measure.second;
+        for (Pair<Long,Double> measure : m) {
+            mean += measure.right;
         }
         mean= mean/m.size();
 
         double temp=0;
 
         //deviation
-        for (Pair<Integer,Double> measure : m) {
-            temp+=Math.pow(measure.second-mean, 2);
+        for (Pair<Long,Double> measure : m) {
+            temp+=Math.pow(measure.right -mean, 2);
         }
 
         deviation=Math.sqrt(temp/m.size());

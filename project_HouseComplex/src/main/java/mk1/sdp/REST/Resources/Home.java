@@ -13,7 +13,7 @@ public class Home {
     public String address;
     public int listeningPort;
 
-    private List<Pair<Integer,Double>> measureList; //pair: first=timestampFromMidnight, second=measure
+    private final List<Pair<Long,Double>> measureList; //pair: left=timestampFromMidnight, right=measure
 
     public Home(){
         measureList= new ArrayList<>();
@@ -23,16 +23,17 @@ public class Home {
         this.HomeID=homeID;
         this.address=address;
         this.listeningPort=listeningPort;
+        measureList = new ArrayList<>();;
     }
 
-    public synchronized boolean AddMeasure(Pair<Integer,Double> m){
+    public synchronized boolean AddMeasure(Pair<Long,Double> m){
         measureList.add(m);
         return measureList.contains(m);
     }
 
 
-    public ArrayList<Pair<Integer,Double>> getLastN(int n){
-        List<Pair<Integer,Double>> copy;
+    public ArrayList<Pair<Long,Double>> getLastN(int n){
+        List<Pair<Long,Double>> copy;
         synchronized (measureList){
             copy= new ArrayList<>(measureList);
         }

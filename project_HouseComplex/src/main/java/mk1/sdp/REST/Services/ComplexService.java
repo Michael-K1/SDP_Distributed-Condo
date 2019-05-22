@@ -54,9 +54,9 @@ public class ComplexService {
     @Produces(MediaType.APPLICATION_JSON)
     public Response serviceGetHouse(@QueryParam("id") int id){
         Pair<Response, Home> resp = checkHousePresent(id);
-        if(resp.first!=null) return resp.first;
+        if(resp.left !=null) return resp.left;
 
-        return Response.ok(resp.second, MediaType.APPLICATION_JSON).build();
+        return Response.ok(resp.right, MediaType.APPLICATION_JSON).build();
     }
 
     @Path("/house/stat")
@@ -65,9 +65,9 @@ public class ComplexService {
     public Response serviceGetLastNLocalStat(@QueryParam("id") int id, @QueryParam("n") int n){
 
         Pair<Response, Home> resp = checkHousePresent(id);
-        if(resp.first!=null) return resp.first;
+        if(resp.left !=null) return resp.left;
 
-        List<Pair<Integer, Double>> list = Complex.getInstance().getLastLocalStat(id, n);
+        List<Pair<Long, Double>> list = Complex.getInstance().getLastLocalStat(id, n);
 
         return Response.ok(list,MediaType.APPLICATION_JSON).build();
 
@@ -78,7 +78,7 @@ public class ComplexService {
     @Produces(MediaType.APPLICATION_JSON)
     public Response serviceGetLocalMeanDev(@QueryParam("id") int id, @QueryParam("n") int n){
         Pair<Response, Home> resp = checkHousePresent(id);
-        if(resp.first!=null) return resp.first;
+        if(resp.left !=null) return resp.left;
 
         return Response.ok(Complex.getInstance().getLocalMeanDev(id,n),MediaType.APPLICATION_JSON).build();
 
@@ -89,12 +89,12 @@ public class ComplexService {
     @Consumes(MediaType.APPLICATION_JSON)
     public Response serviceAddLocalStat(@QueryParam("id") int id, Pair pair){
         Pair<Response, Home> resp = checkHousePresent(id);
-        if(resp.first!=null) return resp.first;
+        if(resp.left !=null) return resp.left;
 
-        Pair<Response,Pair<Integer,Double>> responsePairPair =checkWellFormedPair(pair);
-        if(responsePairPair.first!=null) return responsePairPair.first;
+        Pair<Response,Pair<Long,Double>> responsePairPair =checkWellFormedPair(pair);
+        if(responsePairPair.left !=null) return responsePairPair.left;
 
-        if(Complex.getInstance().addLocalStat(id,responsePairPair.second)){
+        if(Complex.getInstance().addLocalStat(id,responsePairPair.right)){
             return Response.ok().build();
         }
         return Response.status(Response.Status.NOT_ACCEPTABLE).entity("failed to add to the statistics of house with id ="+id).build();
@@ -107,10 +107,10 @@ public class ComplexService {
     @PUT
     @Consumes(MediaType.APPLICATION_JSON)
     public Response serviceAddGlobalStat(Pair pair){
-        Pair<Response,Pair<Integer,Double>> responsePairPair =checkWellFormedPair(pair);
-        if(responsePairPair.first!=null) return responsePairPair.first;
+        Pair<Response,Pair<Long,Double>> responsePairPair =checkWellFormedPair(pair);
+        if(responsePairPair.left !=null) return responsePairPair.left;
 
-        if(Complex.getInstance().addGlobalStat(responsePairPair.second)){
+        if(Complex.getInstance().addGlobalStat(responsePairPair.right)){
             return Response.ok().build();
         }
         return Response.status(Response.Status.NOT_ACCEPTABLE).entity("failed to add to global statistics").build();
@@ -119,7 +119,7 @@ public class ComplexService {
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     public Response serviceGetLastNGlobalStat(@QueryParam("n") int n){  //worst case returns an empty list
-        ArrayList<Pair<Integer, Double>> list = Complex.getInstance().getLastGlobalStat(n);
+        ArrayList<Pair<Long, Double>> list = Complex.getInstance().getLastGlobalStat(n);
 
         return Response.ok(list,MediaType.APPLICATION_JSON).build();
     }
@@ -139,16 +139,16 @@ public class ComplexService {
 
     //endregion
 
-    private Pair<Response,Pair<Integer,Double>> checkWellFormedPair(Pair pair){    //checks if the input pair is well formed
+    private Pair<Response,Pair<Long,Double>> checkWellFormedPair(Pair pair){    //checks if the input pair is well formed
         Response resp;
         if(pair==null) {
             resp = Response.status(Response.Status.PARTIAL_CONTENT).entity("request is empty").build();
             return new Pair<>(resp,null);
         }
 
-        if(pair.first instanceof Integer && pair.second instanceof Double){
-            int v1=(Integer) pair.first;
-            double v2=(Double)pair.second;
+        if(pair.left instanceof Integer && pair.right instanceof Double){
+            long v1=((Integer) pair.left).longValue();
+            double v2=(Double)pair.right;
             return new Pair<>(null,new Pair<>(v1,v2));
         }
 
