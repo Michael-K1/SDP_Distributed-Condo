@@ -3,6 +3,7 @@ package mk1.sdp.PeerToPeer;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 
+import mk1.sdp.PeerToPeer.Mutex.LamportClock;
 import mk1.sdp.REST.RESTServer;
 import mk1.sdp.REST.Resources.Home;
 import mk1.sdp.misc.Common;
@@ -25,6 +26,7 @@ import java.net.URISyntaxException;
 import java.util.Hashtable;
 import java.util.Random;
 import java.util.Scanner;
+import java.util.concurrent.TimeUnit;
 
 public class HousePeer {
     public final int ID;
@@ -34,11 +36,13 @@ public class HousePeer {
 
     private Scanner fromShell;
     private Client client;
-    public WebTarget webTarget;
-
+    private WebTarget webTarget;
     private PeerServer listener;
-    public Hashtable<Integer, ManagedChannel> peerList ;
+
+    public final Hashtable<Integer, ManagedChannel> peerList ;
     public SmartMeterSimulator simulator;
+    public LamportClock lamportClock;
+    private final MessageDispatcher mexDispatcher;
 
     public  static void main (String[] args){
         Random rand=new Random(System.nanoTime());
@@ -56,8 +60,8 @@ public class HousePeer {
         this.host=host;
         this.port=port;
         this.hostServer=hostServer;
-        fromShell=new Scanner(System.in);
-        peerList=new Hashtable<>();
+        peerList = new Hashtable<>();
+        mexDispatcher=new MessageDispatcher(this);
 
         ClientConfig c=new ClientConfig();
         client= ClientBuilder.newClient(c);
@@ -65,13 +69,16 @@ public class HousePeer {
     }
 
     private void start() {
-        if( registerToServer())
-            print("sono dentro");
-        else{
+        if (!registerToServer()) {
             closeConnection();
             return;
         }
-        simulator= new SmartMeterSimulator(new SlidingBuffer(this,24, 0.5f));
+
+        fromShell = new Scanner(System.in);
+
+        lamportClock = new LamportClock(ID);
+        simulator = new SmartMeterSimulator(new SlidingBuffer(this, 24, 0.5f));
+
         simulator.start();
         listener=new PeerServer(this);
         new Thread(listener).start();
@@ -109,6 +116,7 @@ public class HousePeer {
     private boolean registerToServer(int ...retries){
         WebTarget wt=webTarget.path("/complex/add");
         Response resp=null;
+
         try {
              resp = wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).post(Entity.entity(new Home(ID, host, port), MediaType.APPLICATION_JSON_TYPE));
         }catch (ProcessingException p){
@@ -116,8 +124,8 @@ public class HousePeer {
                 Common.printErr("Connection refused by server.\tretrying...");
                 return registerToServer(1);
             }
-            if (retries[0]<5) {
-                Common.printErr("Connection refused by server.\tretrying...");
+            if (retries[0]<=5) {
+                Common.printErr("attempt "+retries[0]+". Connection refused by server.\tretrying...");
                 return registerToServer(retries[0]+1);
             }
             else {
@@ -129,23 +137,30 @@ public class HousePeer {
         if(responseHasError(resp)) {    //if failed close everything
             resp.close();
             return false;
-
         }
 
         Home[] h=resp.readEntity(Home[].class);
+        resp.close();
 
         print("House registered:"+h.length );
+        if(h.length==0)return true;
+
+        addPeers(h);
+
+        print("House "+ID+" registered SUCCESSFULLY!");
+
+        return true;
+    }
+
+    private void addPeers(Home[] h) {
+
         for(Home x :h){
             ManagedChannel channel = ManagedChannelBuilder.forAddress(x.address, x.listeningPort).usePlaintext(true).build();
 
             peerList.put(x.HomeID,channel);
         }
 
-        resp.close();
-
-        print("House "+ID+" registered SUCCESSFULLY!");
-
-        return true;
+        mexDispatcher.addSelfToPeers();
     }
 
     private boolean deleteHouse(int ...tries){
@@ -159,8 +174,8 @@ public class HousePeer {
                 Common.printErr("Connection refused by server.\tretrying...");
                 return deleteHouse(1);
             }
-            if (tries[0]<5) {
-                Common.printErr("Connection refused by server.\tretrying...");
+            if (tries[0]<=5) {
+                Common.printErr("attempt "+tries[0]+". Connection refused by server.\tretrying...");
                 return deleteHouse(tries[0]+1);
             }
             else {
@@ -178,8 +193,22 @@ public class HousePeer {
         fromShell.close();
         listener.stop();
         simulator.stopMeGently();
+        dropConnections();
         print("House "+ID+" successfully deleted!");
+
         return true;
+    }
+
+    private void dropConnections() {
+        for(ManagedChannel x:peerList.values()){
+            try{
+                x.shutdown().awaitTermination(10, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                printErr("interrupted while shutdown house "+ID);
+            }
+        }
+
+        mexDispatcher.removeSelfFromPeers();
     }
 
     private URI getBaseURI() {

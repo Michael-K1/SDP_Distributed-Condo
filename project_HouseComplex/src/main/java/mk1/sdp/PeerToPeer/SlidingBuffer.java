@@ -27,7 +27,7 @@ public class SlidingBuffer implements Buffer {
 
         if(measureList.size()==bufferDim){
             lastCalculated= createMeanMeasure();
-            parent.printMeasure(lastCalculated);
+            //parent.printMeasure(lastCalculated);
             int size=measureList.size();
             measureList=measureList.subList(overlap, size);
 
