@@ -10,7 +10,7 @@ import java.util.Scanner;
 public class Common {
 
     public static void printErr(String s){ System.err.println("[ERROR]: "+s.toUpperCase()+"...");}
-    public static void printHigh(String s){ System.out.println("[ADMIN]: "+s.toUpperCase());}
+    public static void printHigh(String who,String s){ System.out.println("["+who.toUpperCase()+"]: "+s.toUpperCase());}
     public static void print(String s){ System.out.println(s);}
 
     public static boolean responseHasError(@NotNull Response resp){

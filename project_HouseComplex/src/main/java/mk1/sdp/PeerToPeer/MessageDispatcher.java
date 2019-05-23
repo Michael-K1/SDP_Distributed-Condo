@@ -80,6 +80,7 @@ public class MessageDispatcher {
             @Override
             public void onError(Throwable throwable) {
                 printErr("Async self introduction "+ throwable.getMessage());
+                throwable.printStackTrace();
             }
 
             @Override
@@ -101,10 +102,12 @@ public class MessageDispatcher {
     public void removeSelfFromPeers(){
         SelfIntroduction selfIntro = SelfIntroduction.newBuilder().setId(id).build();
         HouseManagementGrpc.HouseManagementStub asyncstub;
+
         List<ManagedChannel> copy ;
         synchronized (parent.peerList){
             copy = new ArrayList<>(parent.peerList.values());
         }
+
         final int[] count = {0};
         StreamObserver<Ack> respObs=new StreamObserver<Ack>() {
             @Override
@@ -116,19 +119,20 @@ public class MessageDispatcher {
             @Override
             public void onError(Throwable throwable) {
                 printErr("Async self deletion "+ throwable.getMessage());
+                throwable.printStackTrace();
             }
 
             @Override
             public void onCompleted() {
-                count[0]++;
+                count[0]+=1;
                 print("[HOUSE "+id+"] successful removal: "+count[0]+"/"+copy.size());
             }
         };
 
         for (ManagedChannel chan:copy) {
             asyncstub=HouseManagementGrpc.newStub(chan);
-
             asyncstub.removeHome(selfIntro, respObs);
+
 
         }
 

@@ -28,10 +28,10 @@ public class HouseManagementService extends HouseManagementImplBase{
         synchronized (parent.peerList){
             if(!parent.peerList.containsKey(request.getId())){
                 parent.peerList.put(request.getId(),channel);
-                s="[REMOTE "+id+"] added to peerList ";
+                s="[REMOTE "+id+"] added "+request.getId()+" to peerList.\t Hello!";
             }else {
                 channel.shutdown();
-                s="[REMOTE "+id+"] says hello";
+                s="[REMOTE "+id+"] says Hello!";
             }
         }
         responseObserver.onNext(simpleAck(s));

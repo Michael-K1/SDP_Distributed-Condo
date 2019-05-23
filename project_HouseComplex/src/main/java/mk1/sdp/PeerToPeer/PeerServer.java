@@ -4,6 +4,7 @@ import io.grpc.Server;
 import io.grpc.ServerBuilder;
 
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 import static mk1.sdp.misc.Common.*;
 
@@ -31,7 +32,7 @@ public class PeerServer implements Runnable{
     private void startServer(){
         try {
             server.start();
-            print("[HOUSE "+id+"] starting server...".toUpperCase());
+            printHigh("[HOUSE "+id+"]"," starting server...");
             Runtime.getRuntime().addShutdownHook(new Thread(){
                 @Override
                 public void run(){
@@ -60,8 +61,14 @@ public class PeerServer implements Runnable{
     }
 
     public void stop(){
-        if(server!=null )
-            server.shutdown();
+        if(server!=null ) {
+            try {
+                server.shutdown().awaitTermination(5, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                //e.printStackTrace();
+                printErr("while waiting for termination");
+            }
+        }
 
     }
 }

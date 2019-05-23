@@ -76,7 +76,7 @@ public class Administrator {
                 case 5: getGlobalMeanDev();
                     break;
                 default:
-                        printHigh("closing the client...");
+                        printHigh("admin","closing the client...");
                         fromShell.close();      //closing the input stream before leaving
                         return;
             }
@@ -96,7 +96,7 @@ public class Administrator {
 
         if(responseHasError(response)) return;
 
-        printHigh("output from server: ");
+        printHigh("admin","output from server: ");
 
         Complex comp= response.readEntity(Complex.class);
 
@@ -237,7 +237,7 @@ public class Administrator {
             return;
         }
 
-        printHigh("output from server: ");
+        printHigh("admin","output from server: ");
         print("Last "+mes.length+" statistics of "+pretty);
         for(Pair m:mes){
             print("Time: "+m.left +" --> "+m.right +" kW"); //todo pretty print time
@@ -257,7 +257,7 @@ public class Administrator {
             return;
         }
 
-        printHigh("output from server: ");
+        printHigh("admin","output from server: ");
         print("The mean and standard deviation of "+pretty+" are:"
                 +"\n\t Mean= "+meanDev.left
                 +"\n\t StdDev= "+meanDev.right);

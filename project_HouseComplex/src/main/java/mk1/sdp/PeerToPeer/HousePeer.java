@@ -70,7 +70,7 @@ public class HousePeer {
 
     private void start() {
         if (!registerToServer()) {
-            closeConnection();
+            client.close();
             return;
         }
 
@@ -78,9 +78,10 @@ public class HousePeer {
 
         lamportClock = new LamportClock(ID);
         simulator = new SmartMeterSimulator(new SlidingBuffer(this, 24, 0.5f));
+        listener=new PeerServer(this);
 
         simulator.start();
-        listener=new PeerServer(this);
+
         new Thread(listener).start();
 
         menu();
@@ -191,15 +192,23 @@ public class HousePeer {
         }
         resp.close();
         fromShell.close();
-        listener.stop();
         simulator.stopMeGently();
         dropConnections();
         print("House "+ID+" successfully deleted!");
+
 
         return true;
     }
 
     private void dropConnections() {
+        if(peerList.isEmpty()) {
+            listener.stop();
+            client.close();
+            return;
+        }
+
+        mexDispatcher.removeSelfFromPeers();
+
         for(ManagedChannel x:peerList.values()){
             try{
                 x.shutdown().awaitTermination(10, TimeUnit.SECONDS);
@@ -208,7 +217,8 @@ public class HousePeer {
             }
         }
 
-        mexDispatcher.removeSelfFromPeers();
+        listener.stop();
+        client.close();
     }
 
     private URI getBaseURI() {
@@ -220,10 +230,6 @@ public class HousePeer {
             e.printStackTrace();
         }
         return uri;
-    }
-
-    private void closeConnection(){
-        client.close();
     }
 
     public void printMeasure(Pair<Long,Double> measure){

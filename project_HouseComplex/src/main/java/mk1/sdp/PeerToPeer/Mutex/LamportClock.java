@@ -19,6 +19,9 @@ public class LamportClock {
     public synchronized int peekClock(){
         return clock;
     }
+    public synchronized void updateClock(int newClock){
+        clock=newClock;
+    }
 
     public boolean after(Pair<Integer,Integer> otherClockID){
         if(clock>otherClockID.left)
