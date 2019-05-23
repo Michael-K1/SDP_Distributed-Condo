@@ -1,0 +1,26 @@
+syntax="proto3";
+
+package Complex;
+
+option java_package="mk1.sdp.protoBuf";
+
+message Measure{
+    int64 timeStamp=1;
+    double measurement=2;
+
+}
+message RequestBoost{
+    int32 requestor=1;
+    int64 timestamp=2;
+}
+
+message Ack{
+    bool ack=1;
+    bool canBoost=2;
+}
+
+message Home{   //if the house comes later on needs to be added to the list of other houses
+    int32 id=1;
+    string address=2;
+    int32 port=3;
+}

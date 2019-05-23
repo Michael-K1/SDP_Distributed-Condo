@@ -11,9 +11,11 @@ public class SlidingBuffer implements Buffer {
     private List<Pair<Long,Double>> measureList;
     private int bufferDim;
     private int overlap;
+    private HousePeer parent;
     public Pair<Long, Double> lastCalculated;
 
-    public SlidingBuffer(int bufferDim, float overlap){     //0.00<=overlap<=1.00
+    public SlidingBuffer(HousePeer parent,int bufferDim, float overlap){     //0.00<=overlap<=1.00
+        this.parent=parent;
         this.bufferDim=bufferDim;
         this.overlap=Math.round(bufferDim*overlap);
         measureList=new ArrayList<>();
@@ -25,7 +27,7 @@ public class SlidingBuffer implements Buffer {
 
         if(measureList.size()==bufferDim){
             lastCalculated= createMeanMeasure();
-
+            parent.printMeasure(lastCalculated);
             int size=measureList.size();
             measureList=measureList.subList(overlap, size);
 
