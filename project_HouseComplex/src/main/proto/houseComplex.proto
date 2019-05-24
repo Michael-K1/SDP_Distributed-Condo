@@ -15,20 +15,21 @@ message RequestBoost{
     int32 requestor=1;
     int32 lamportTimestamp=2;
 }
+message Coordinator{
+    int32 coordinatorID=1;
+}
 
 message Ack{
     bool ack=1;
     bool canBoost=2;
     string message=3;
+    int32 coordinator=4;
 }
 
 message SelfIntroduction{   //if the house comes later on needs to be added to the list of other houses
     int32 id=1;
     string address=2;
     int32 port=3;
-}
-message Coordinator{
-    int32 coordinatorID=1;
 }
 
 service HouseManagement{

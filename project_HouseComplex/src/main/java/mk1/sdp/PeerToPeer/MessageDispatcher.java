@@ -69,12 +69,17 @@ public class MessageDispatcher {
             copy = new ArrayList<>(parent.peerList.values());
         }
 
-        final int[] count = {0};
+        final int[] count = {0,-1};
         StreamObserver<Ack> respObs=new StreamObserver<Ack>() {
             @Override
             public void onNext(Ack ack) {
-                if(ack.getAck())
+                if(ack.getAck()){
                     print(ack.getMessage());
+
+                    if(count[1]!=ack.getCoordinator()){
+                        count[1]=ack.getCoordinator();
+                    }
+                }
             }
 
             @Override
@@ -87,6 +92,15 @@ public class MessageDispatcher {
             public void onCompleted() {
                 count[0]+=1;
                 print("[HOUSE "+id+"] successful introduction: "+count[0]+"/"+copy.size());
+                if(count[0]==copy.size()){
+                    synchronized (parent){
+                        parent.coordinator=count[1];
+                    }
+
+                    print("coordinator is: "+count[1]);
+                }
+
+
             }
         };
         for (ManagedChannel chan:copy) {

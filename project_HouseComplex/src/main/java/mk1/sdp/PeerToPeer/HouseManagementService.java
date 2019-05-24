@@ -56,6 +56,7 @@ public class HouseManagementService extends HouseManagementImplBase{
         responseObserver.onCompleted();
 
         lamportClock.afterEvent();
+
         if(toRemove!=null){
 
             try {
@@ -67,6 +68,9 @@ public class HouseManagementService extends HouseManagementImplBase{
     }
 
     private Ack simpleAck(String text){
-        return Ack.newBuilder().setAck(true).setCanBoost(false).setMessage(text).build();
+        synchronized (parent) {
+            return Ack.newBuilder().setAck(true).setCoordinator(parent.ID).setMessage(text).build();
+        }
+
     }
 }

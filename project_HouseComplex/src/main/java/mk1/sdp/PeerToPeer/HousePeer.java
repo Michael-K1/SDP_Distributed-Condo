@@ -33,6 +33,7 @@ public class HousePeer {
     public final String host;
     public final int port;
     public final String hostServer;
+    public int coordinator;
 
     private Scanner fromShell;
     private Client client;
@@ -144,7 +145,11 @@ public class HousePeer {
         resp.close();
 
         print("House registered:"+h.length );
-        if(h.length==0)return true;
+        if(h.length==0){
+            coordinator=this.ID;
+            return true;
+        }
+
 
         addPeers(h);
 
@@ -162,6 +167,7 @@ public class HousePeer {
         }
 
         mexDispatcher.addSelfToPeers();
+        lamportClock.afterEvent();
     }
 
     private boolean deleteHouse(int ...tries){
