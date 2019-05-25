@@ -79,8 +79,6 @@ public class HousePeer {
         }
 
         fromShell = new Scanner(System.in);
-
-
         simulator = new SmartMeterSimulator(new SlidingBuffer(this, 24, 0.5f));
         listener=new PeerServer(this);
 
@@ -89,7 +87,6 @@ public class HousePeer {
         new Thread(listener).start();
 
         menu();
-
     }
 
     private void menu() {
@@ -117,27 +114,14 @@ public class HousePeer {
 
     }
 
-    //region REST INTERFACE
-    private boolean registerToServer(int ...retries){
-        WebTarget wt=webTarget.path("/complex/add");
-        Response resp=null;
 
-        try {
-             resp = wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).post(Entity.entity(new Home(ID, host, port), MediaType.APPLICATION_JSON_TYPE));
-        }catch (ProcessingException p){
-            if(retries.length==0){
-                Common.printErr("Connection refused by server.\tretrying...");
-                return registerToServer(1);
-            }
-            if (retries[0]<=5) {
-                Common.printErr("attempt "+retries[0]+". Connection refused by server.\tretrying...");
-                return registerToServer(retries[0]+1);
-            }
-            else {
-                Common.printErr("unable to connect to server.\n Closing program...");
-                return false;
-            }
-        }
+
+    //region APPLICATION START
+    private boolean registerToServer(){
+        WebTarget wt=webTarget.path("/complex/add");
+        Response resp= tryConnection(wt,true);
+
+        if(resp==null) return false;
 
         if(responseHasError(resp)) {    //if failed close everything
             resp.close();
@@ -147,7 +131,7 @@ public class HousePeer {
         Home[] h=resp.readEntity(Home[].class);
         resp.close();
 
-        print("House registered:"+h.length );
+        print("House registered in complex:"+h.length );
         if(h.length==0||(h.length==1 && h[0].HomeID==this.ID)){
             coordinator=this.ID;
             return true;
@@ -159,6 +143,30 @@ public class HousePeer {
         print("House "+ID+" registered SUCCESSFULLY!");
 
         return true;
+    }
+
+    private Response tryConnection(WebTarget wt,boolean registration, int ...retries){
+        Response resp=null;
+        try {
+            if(registration)
+                resp = wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).post(Entity.entity(new Home(ID, host, port), MediaType.APPLICATION_JSON_TYPE));
+            else//remotion
+                resp = wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).delete();
+        }catch (ProcessingException p){
+            if(retries.length==0){
+                Common.printErr("Connection refused by server.\tretrying...");
+                return tryConnection(wt,registration,1);
+            }
+            if (retries[0]<=5) {
+                Common.printErr("attempt "+retries[0]+". Connection refused by server.\tretrying...");
+                return tryConnection(wt,registration,retries[0]+1);
+            }
+            else {
+                Common.printErr("unable to connect to server.\n Closing program...");
+                return null;
+            }
+        }
+        return resp;
     }
 
     private void addPeers(Home[] h) {
@@ -173,26 +181,25 @@ public class HousePeer {
         lamportClock.afterEvent();
     }
 
-    private boolean deleteHouse(int ...tries){
-        WebTarget wt = webTarget.path("/complex/delete").queryParam("id",ID);
-        Response resp=null;
+    private URI getBaseURI() {
+        URI uri=null;
 
         try {
-            resp = wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).delete();
-        }catch (ProcessingException p){
-            if(tries.length==0){
-                Common.printErr("Connection refused by server.\tretrying...");
-                return deleteHouse(1);
-            }
-            if (tries[0]<=5) {
-                Common.printErr("attempt "+tries[0]+". Connection refused by server.\tretrying...");
-                return deleteHouse(tries[0]+1);
-            }
-            else {
-                Common.printErr("unable to connect to server.\n Closing program...");
-                return false;
-            }
+            uri = new URI("http://"+ RESTServer.HOST+":"+RESTServer.PORT+"/");
+        }catch (URISyntaxException e) {
+            e.printStackTrace();
         }
+        return uri;
+    }
+    //endregion
+
+    //region APPLICATION END
+    private boolean deleteHouse(int ...tries){
+        WebTarget wt = webTarget.path("/complex/delete").queryParam("id",ID);
+        Response resp=tryConnection(wt,false );
+
+
+        if(resp==null) return false;
 
         if(responseHasError(resp)) {    //if failed close everything
             resp.close();
@@ -235,20 +242,11 @@ public class HousePeer {
         listener.stop();
         client.close();
     }
+    //endregion
 
-    private URI getBaseURI() {
-        URI uri=null;
-
-        try {
-            uri = new URI("http://"+ RESTServer.HOST+":"+RESTServer.PORT+"/");
-        }catch (URISyntaxException e) {
-            e.printStackTrace();
-        }
-        return uri;
-    }
 
     public void printMeasure(Pair<Long,Double> measure){
+
         print(measure.left+" "+measure.right);
     }
-    //endregion
 }

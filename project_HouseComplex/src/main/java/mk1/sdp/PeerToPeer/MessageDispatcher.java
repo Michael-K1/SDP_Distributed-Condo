@@ -30,7 +30,7 @@ public class MessageDispatcher {
             this.id=parent.ID;
             this.address=parent.host;
             this.port=parent.port;
-            lamportClock=parent.lamportClock;
+
         }
     }
 
@@ -41,14 +41,15 @@ public class MessageDispatcher {
             copy=new ArrayList<>(parent.peerList.values());
         }
         sendToPeer(copy,measure);
-
-        lamportClock.afterEvent();
-
+        synchronized (parent.lamportClock) {
+            parent.lamportClock.afterEvent();
+        }
     }
 
-    private void sendToServer(WebTarget wt, Pair<Long, Double> measure) {   //wt is already correct
+    private void sendToServer(WebTarget wt, Pair<Long, Double> measure) {   //wt is already correct //todo add check if response has error
 
         Response resp = wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).put(Entity.entity(measure, MediaType.APPLICATION_JSON_TYPE));
+
     }
 
     private void sendToPeer(List<ManagedChannel> copy, Pair<Long, Double> measure) {
