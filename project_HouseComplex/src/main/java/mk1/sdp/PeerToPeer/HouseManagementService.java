@@ -21,6 +21,7 @@ public class HouseManagementService extends HouseManagementImplBase{
         this.id=parent.ID;
         lamportClock=parent.lamportClock;
     }
+
     @Override
     public void addHome(SelfIntroduction request, StreamObserver<Ack> responseObserver) {
         ManagedChannel channel= ManagedChannelBuilder.forAddress(request.getAddress(),request.getPort()).usePlaintext(true).build();
@@ -69,7 +70,7 @@ public class HouseManagementService extends HouseManagementImplBase{
 
     private Ack simpleAck(String text){
         synchronized (parent) {
-            return Ack.newBuilder().setAck(true).setCoordinator(parent.ID).setMessage(text).build();
+            return Ack.newBuilder().setAck(true).setCoordinator(parent.coordinator).setMessage(text).build();
         }
 
     }

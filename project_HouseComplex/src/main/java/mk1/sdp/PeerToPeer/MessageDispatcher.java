@@ -92,9 +92,10 @@ public class MessageDispatcher {
             public void onCompleted() {
                 count[0]+=1;
                 print("[HOUSE "+id+"] successful introduction: "+count[0]+"/"+copy.size());
-                if(count[0]==copy.size()){
+                if(count[0]>=(copy.size()*0.75f)){
                     synchronized (parent){
-                        parent.coordinator=count[1];
+                        if(parent.coordinator!=count[1])
+                            parent.coordinator=count[1];
                     }
 
                     print("coordinator is: "+count[1]);
@@ -113,14 +114,9 @@ public class MessageDispatcher {
 
     }
 
-    public void removeSelfFromPeers(){
+    public void removeSelfFromPeers(List<ManagedChannel> copy){
         SelfIntroduction selfIntro = SelfIntroduction.newBuilder().setId(id).build();
         HouseManagementGrpc.HouseManagementStub asyncstub;
-
-        List<ManagedChannel> copy ;
-        synchronized (parent.peerList){
-            copy = new ArrayList<>(parent.peerList.values());
-        }
 
         final int[] count = {0};
         StreamObserver<Ack> respObs=new StreamObserver<Ack>() {
@@ -146,10 +142,6 @@ public class MessageDispatcher {
         for (ManagedChannel chan:copy) {
             asyncstub=HouseManagementGrpc.newStub(chan);
             asyncstub.removeHome(selfIntro, respObs);
-
-
         }
-
-
     }
 }

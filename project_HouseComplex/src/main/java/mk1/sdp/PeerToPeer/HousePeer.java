@@ -23,6 +23,7 @@ import javax.ws.rs.core.Response;
 import java.net.URI;
 import java.net.URISyntaxException;
 
+import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.Random;
 import java.util.Scanner;
@@ -33,7 +34,7 @@ public class HousePeer {
     public final String host;
     public final int port;
     public final String hostServer;
-    public int coordinator;
+    public int coordinator=-1;
 
     private Scanner fromShell;
     private Client client;
@@ -42,14 +43,15 @@ public class HousePeer {
 
     public final Hashtable<Integer, ManagedChannel> peerList ;
     public SmartMeterSimulator simulator;
-    public LamportClock lamportClock;
+    public final LamportClock lamportClock;
     private final MessageDispatcher mexDispatcher;
 
     public  static void main (String[] args){
         Random rand=new Random(System.nanoTime());
         int id=rand.nextInt(50)+1;
-        int port=rand.nextInt(64511)+1024;  //to avoid the first 1024
+        int port=rand.nextInt((65535 - 49152) + 1) + 49152; //only using free ports
         String host= "localhost";
+
         HousePeer peer =  new HousePeer(id, host, port, "http://"+RESTServer.HOST+":"+RESTServer.PORT+"/");
 
         peer.start();
@@ -63,6 +65,7 @@ public class HousePeer {
         this.hostServer=hostServer;
         peerList = new Hashtable<>();
         mexDispatcher=new MessageDispatcher(this);
+        lamportClock = new LamportClock(ID);
 
         ClientConfig c=new ClientConfig();
         client= ClientBuilder.newClient(c);
@@ -77,7 +80,7 @@ public class HousePeer {
 
         fromShell = new Scanner(System.in);
 
-        lamportClock = new LamportClock(ID);
+
         simulator = new SmartMeterSimulator(new SlidingBuffer(this, 24, 0.5f));
         listener=new PeerServer(this);
 
@@ -145,7 +148,7 @@ public class HousePeer {
         resp.close();
 
         print("House registered:"+h.length );
-        if(h.length==0){
+        if(h.length==0||(h.length==1 && h[0].HomeID==this.ID)){
             coordinator=this.ID;
             return true;
         }
@@ -213,9 +216,15 @@ public class HousePeer {
             return;
         }
 
-        mexDispatcher.removeSelfFromPeers();
+        ArrayList<ManagedChannel> copy =null;
 
-        for(ManagedChannel x:peerList.values()){
+        synchronized (peerList){
+            copy=new ArrayList<>(peerList.values());
+        }
+
+        mexDispatcher.removeSelfFromPeers(copy);
+
+        for(ManagedChannel x:copy){
             try{
                 x.shutdown().awaitTermination(10, TimeUnit.SECONDS);
             } catch (InterruptedException e) {

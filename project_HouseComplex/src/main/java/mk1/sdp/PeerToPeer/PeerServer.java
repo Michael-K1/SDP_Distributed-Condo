@@ -32,7 +32,7 @@ public class PeerServer implements Runnable{
     private void startServer(){
         try {
             server.start();
-            printHigh("[HOUSE "+id+"]"," starting server...");
+            printHigh("HOUSE "+id," starting server...");
             Runtime.getRuntime().addShutdownHook(new Thread(){
                 @Override
                 public void run(){
@@ -54,7 +54,7 @@ public class PeerServer implements Runnable{
             try {
                 server.awaitTermination();
             } catch (InterruptedException e) {
-                printErr("while waiting for termination");
+                printErr("while waiting for termination in blockUntilShutdown");
                 e.printStackTrace();
             }
         }
@@ -63,10 +63,13 @@ public class PeerServer implements Runnable{
     public void stop(){
         if(server!=null ) {
             try {
-                server.shutdown().awaitTermination(5, TimeUnit.SECONDS);
+                server.shutdown().awaitTermination(10, TimeUnit.SECONDS);
             } catch (InterruptedException e) {
                 //e.printStackTrace();
-                printErr("while waiting for termination");
+                printErr("while waiting for termination in stop");
+
+            }finally {
+                server.shutdownNow();
             }
         }
 
