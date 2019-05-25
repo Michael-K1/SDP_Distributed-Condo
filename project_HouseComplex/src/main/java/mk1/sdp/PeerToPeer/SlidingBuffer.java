@@ -12,7 +12,7 @@ public class SlidingBuffer implements Buffer {
     private int bufferDim;
     private int overlap;
     private HousePeer parent;
-    public Pair<Long, Double> lastCalculated;
+    private Pair<Long, Double> lastCalculated;
 
     public SlidingBuffer(HousePeer parent,int bufferDim, float overlap){     //0.00<=overlap<=1.00
         this.parent=parent;

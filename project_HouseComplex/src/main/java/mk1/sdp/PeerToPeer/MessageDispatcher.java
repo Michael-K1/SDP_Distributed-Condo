@@ -24,6 +24,7 @@ public class MessageDispatcher {
     private final String address;
     private final int port;
     private LamportClock lamportClock;
+
     public MessageDispatcher(HousePeer parent){
         this.parent=parent;
         synchronized (this.parent){
@@ -70,15 +71,15 @@ public class MessageDispatcher {
             copy = new ArrayList<>(parent.peerList.values());
         }
 
-        final int[] count = {0,-1};
+        final  Pair<Integer, Integer> p = Pair.of(0,-1);
         StreamObserver<Ack> respObs=new StreamObserver<Ack>() {
             @Override
             public void onNext(Ack ack) {
                 if(ack.getAck()){
                     print(ack.getMessage());
-
-                    if(count[1]!=ack.getCoordinator()){
-                        count[1]=ack.getCoordinator();
+                    int coord=ack.getCoordinator();
+                    if(coord!=-1 && p.right!=coord){
+                        p.right=coord;
                     }
                 }
             }
@@ -86,20 +87,22 @@ public class MessageDispatcher {
             @Override
             public void onError(Throwable throwable) {
                 printErr("Async self introduction "+ throwable.getMessage());
-                throwable.printStackTrace();
+//                throwable.printStackTrace();
+                throwable.getCause().printStackTrace();
             }
 
             @Override
             public void onCompleted() {
-                count[0]+=1;
-                print("[HOUSE "+id+"] successful introduction: "+count[0]+"/"+copy.size());
-                if(count[0]>=(copy.size()*0.75f)){
+                p.left+=1;
+
+                print("[HOUSE "+id+"] successful introduction: "+p.left+"/"+copy.size());
+                if(p.right!=-1){
                     synchronized (parent){
-                        if(parent.coordinator!=count[1])
-                            parent.coordinator=count[1];
+                        if(parent.coordinator!=p.right)
+                            parent.coordinator=p.right;
                     }
 
-                    print("coordinator is: "+count[1]);
+
                 }
 
 
@@ -141,6 +144,7 @@ public class MessageDispatcher {
         };
 
         for (ManagedChannel chan:copy) {
+            if(chan.isShutdown()) continue;
             asyncstub=HouseManagementGrpc.newStub(chan);
             asyncstub.removeHome(selfIntro, respObs);
         }

@@ -6,6 +6,8 @@ import io.grpc.stub.StreamObserver;
 import mk1.sdp.GRPC.HouseManagementGrpc.HouseManagementImplBase;
 import mk1.sdp.GRPC.PeerMessages.*;
 import mk1.sdp.PeerToPeer.Mutex.LamportClock;
+
+import static mk1.sdp.misc.Common.print;
 import static mk1.sdp.misc.Common.printErr;
 
 import java.util.concurrent.TimeUnit;
@@ -30,6 +32,7 @@ public class HouseManagementService extends HouseManagementImplBase{
             if(!parent.peerList.containsKey(request.getId())){
                 parent.peerList.put(request.getId(),channel);
                 s="[REMOTE "+id+"] added "+request.getId()+" to peerList.\t Hello!";
+                print("[HOUSE"+id+"] added "+request.getId()+" to peerList.");
             }else {
                 channel.shutdown();
                 s="[REMOTE "+id+"] says Hello!";

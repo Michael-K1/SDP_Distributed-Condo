@@ -20,13 +20,11 @@ import javax.ws.rs.ProcessingException;
 import javax.ws.rs.client.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.lang.reflect.Array;
 import java.net.URI;
 import java.net.URISyntaxException;
 
-import java.util.ArrayList;
-import java.util.Hashtable;
-import java.util.Random;
-import java.util.Scanner;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 public class HousePeer {
@@ -93,23 +91,37 @@ public class HousePeer {
         boolean isDeleted = false;
 
         while (!isDeleted){
-            int val=-1;
+            int choice=-1;
             do{
 
                 print("\n##########################################################");
                 print("Press -1- to require a boost");
+                print("Press -2- to show the coordinator");
+                print("Press -3- to show the house registered in the complex");
                 print("Press -0- to exit the Complex");
                 print("\n##########################################################");
-                val= readInputInteger(fromShell, "input must be 0 or 1");
+                choice= readInputInteger(fromShell, "input must be between 0 and 3");
 
-            }while(val!=0 && val!=1);
+            }while(choice<0 || choice>3);
 
-            if(val==0)
-                isDeleted=deleteHouse();
 
-            if(val==1){
-                //todo chiedere il boost
+            switch (choice){
+                case 0: isDeleted=deleteHouse();
+                    break;
+                case 1:
+                    break;
+                case 2: print("coordinator is: "+coordinator);
+                    break;
+                case 3: Set<Integer> keys=peerList.keySet();
+                        for(int x:keys){
+                            print("House: "+x);
+                        }
+                    break;
+                default:
             }
+
+
+
         }
 
     }
@@ -134,7 +146,7 @@ public class HousePeer {
         print("House registered in complex:"+h.length );
         if(h.length==0||(h.length==1 && h[0].HomeID==this.ID)){
             coordinator=this.ID;
-            return true;
+
         }
 
 
