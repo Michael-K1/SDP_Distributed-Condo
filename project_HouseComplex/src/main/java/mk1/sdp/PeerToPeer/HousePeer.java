@@ -237,6 +237,7 @@ public class HousePeer {
 
         synchronized (peerList){
             copy=new ArrayList<>(peerList.values());
+            peerList.clear();
         }
 
         mexDispatcher.removeSelfFromPeers(copy);

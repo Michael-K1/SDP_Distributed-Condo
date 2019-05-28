@@ -7,10 +7,9 @@ import mk1.sdp.GRPC.HouseManagementGrpc.HouseManagementImplBase;
 import mk1.sdp.GRPC.PeerMessages.*;
 import mk1.sdp.PeerToPeer.Mutex.LamportClock;
 
-import static mk1.sdp.misc.Common.print;
-import static mk1.sdp.misc.Common.printErr;
-
 import java.util.concurrent.TimeUnit;
+
+import static mk1.sdp.misc.Common.*;
 
 
 public class HouseManagementService extends HouseManagementImplBase{
@@ -32,7 +31,7 @@ public class HouseManagementService extends HouseManagementImplBase{
             if(!parent.peerList.containsKey(request.getId())){
                 parent.peerList.put(request.getId(),channel);
                 s="[REMOTE "+id+"] added "+request.getId()+" to peerList.\t Hello!";
-                print("[HOUSE"+id+"] added "+request.getId()+" to peerList.");
+                print("[HOUSE "+id+"] added "+request.getId()+" to peerList.");
             }else {
                 channel.shutdown();
                 s="[REMOTE "+id+"] says Hello!";
@@ -48,28 +47,26 @@ public class HouseManagementService extends HouseManagementImplBase{
     public void removeHome(SelfIntroduction request, StreamObserver<Ack> responseObserver) {
         ManagedChannel toRemove=null;
 
-        String s= "[REMOTE " + id + "] peer "+request.getId()+" nor present";
-        synchronized (parent.peerList){
-            if(parent.peerList.containsKey(request.getId())) {
-                toRemove= parent.peerList.remove(request.getId());
+        String s;
+        if(request.getId()!=id) {//if NOT self removal
+            printHigh("HOUSE "+id," trying removal of  "+request.getId()+" from peerList....");
+            synchronized (parent.peerList){
+                if(parent.peerList.containsKey(request.getId())) {
+                    /*toRemove=*/ parent.peerList.remove(request.getId());
+                    s = "[REMOTE " + id + "] removed from peerList ";
 
-                s = "[REMOTE " + id + "] removed from peerList ";
+                    printHigh("HOUSE "+id," removal of "+request.getId()+" COMPLETED!");
+                }else
+                    s=s= "[REMOTE " + id + "] peer "+request.getId()+" not present";
             }
+
+        }else{
+            s="[HOUSE"+id+"] self deletion completed";
         }
         responseObserver.onNext(simpleAck(s));
         responseObserver.onCompleted();
 
         lamportClock.afterEvent();
-
-        if(toRemove!=null){
-
-            try {
-                if(!toRemove.isShutdown())
-                    toRemove.shutdown().awaitTermination(5, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-                printErr("[house "+id+"] interrupted while shutting connection to house "+request.getId());
-            }
-        }
     }
 
     private Ack simpleAck(String text){
