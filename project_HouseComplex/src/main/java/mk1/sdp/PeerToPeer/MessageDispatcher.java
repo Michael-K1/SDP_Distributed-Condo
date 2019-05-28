@@ -14,6 +14,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.List;
+//import java.util.concurrent.TimeUnit;
 
 import static mk1.sdp.misc.Common.*;
 
@@ -30,7 +31,6 @@ public class MessageDispatcher {
             this.id=parent.ID;
             this.address=parent.host;
             this.port=parent.port;
-
         }
     }
 
@@ -63,7 +63,7 @@ public class MessageDispatcher {
 
     public void addSelfToPeers(){
         SelfIntroduction selfIntro = SelfIntroduction.newBuilder().setId(id).setAddress(address).setPort(port).build();
-        HouseManagementGrpc.HouseManagementStub asyncstub;
+
 
         List<ManagedChannel> copy ;
         synchronized (parent.peerList){
@@ -86,7 +86,6 @@ public class MessageDispatcher {
             @Override
             public void onError(Throwable throwable) {
                 printErr("Async self introduction "+ throwable.getMessage());
-//                throwable.printStackTrace();
                 throwable.getCause().printStackTrace();
             }
 
@@ -94,34 +93,49 @@ public class MessageDispatcher {
             public void onCompleted() {
                 synchronized (MessageDispatcher.this){
                     p.left+=1;
+                    print("[HOUSE "+id+"] successful introduction: "+p.left+"/"+copy.size());
                 }
 
-                print("[HOUSE "+id+"] successful introduction: "+p.left+"/"+copy.size());
                 if(p.right!=-1){
                     synchronized (parent){
                         if(parent.coordinator!=p.right)
                             parent.coordinator=p.right;
                     }
-
-
                 }
-
-
             }
         };
+
+
+        HouseManagementGrpc.HouseManagementStub asyncStub;
         for (ManagedChannel chan:copy) {
-            asyncstub=HouseManagementGrpc.newStub(chan);
+            asyncStub=HouseManagementGrpc.newStub(chan);
 
-            asyncstub.addHome(selfIntro, respObs);
+            asyncStub.addHome(selfIntro, respObs);
+         /*   Runnable runner=new Runnable() {
+                @Override
+                public void run() {
+                    HouseManagementGrpc.HouseManagementStub asyncStub;
+                    asyncStub=HouseManagementGrpc.newStub(chan);
 
+                    asyncStub.addHome(selfIntro, respObs);
+
+                    try {
+                        chan.awaitTermination(10, TimeUnit.SECONDS);
+                    } catch (InterruptedException e) {
+                        printErr("interrupted while waiting for termination in self introduction on channel: "+chan.toString());
+                    }
+                }
+            };
+
+            new Thread(runner).start();
+*/
         }
 
-
+        parent.lamportClock.afterEvent();
     }
 
     public void removeSelfFromPeers(List<ManagedChannel> copy){
         SelfIntroduction selfIntro = SelfIntroduction.newBuilder().setId(id).build();
-        HouseManagementGrpc.HouseManagementStub asyncstub;
 
         final int[] count = {0};
         StreamObserver<Ack> respObs=new StreamObserver<Ack>() {
@@ -139,18 +153,24 @@ public class MessageDispatcher {
 
             @Override
             public void onCompleted() {
-                count[0]+=1;
-                print("[HOUSE "+id+"] successful removal: "+count[0]+"/"+copy.size());
+                synchronized (MessageDispatcher.this) {
+                    count[0] += 1;
+                    print("[HOUSE "+id+"] successful removal: "+count[0]+"/"+copy.size());
+                }
+
             }
         };
 
+        HouseManagementGrpc.HouseManagementStub asyncStub;
         for (ManagedChannel chan:copy) {
             if(chan.isShutdown()) {
                 printHigh("house"+id,"channel already closed");
                 continue;
             }
-            asyncstub=HouseManagementGrpc.newStub(chan);
-            asyncstub.removeHome(selfIntro, respObs);
+
+            asyncStub=HouseManagementGrpc.newStub(chan);
+            asyncStub.removeHome(selfIntro, respObs);
         }
+
     }
 }

@@ -37,6 +37,9 @@ public class HouseManagementService extends HouseManagementImplBase{
                 s="[REMOTE "+id+"] says Hello!";
             }
         }
+
+        testTimeWaster();
+
         responseObserver.onNext(simpleAck(s));
         responseObserver.onCompleted();
         lamportClock.afterEvent();
@@ -45,14 +48,14 @@ public class HouseManagementService extends HouseManagementImplBase{
 
     @Override
     public void removeHome(SelfIntroduction request, StreamObserver<Ack> responseObserver) {
-        ManagedChannel toRemove=null;
+
 
         String s;
         if(request.getId()!=id) {//if NOT self removal
             printHigh("HOUSE "+id," trying removal of  "+request.getId()+" from peerList....");
             synchronized (parent.peerList){
                 if(parent.peerList.containsKey(request.getId())) {
-                    /*toRemove=*/ parent.peerList.remove(request.getId());
+                    parent.peerList.remove(request.getId());
                     s = "[REMOTE " + id + "] removed from peerList ";
 
                     printHigh("HOUSE "+id," removal of "+request.getId()+" COMPLETED!");
@@ -62,7 +65,11 @@ public class HouseManagementService extends HouseManagementImplBase{
 
         }else{
             s="[HOUSE"+id+"] self deletion completed";
+
+
         }
+        testTimeWaster();
+
         responseObserver.onNext(simpleAck(s));
         responseObserver.onCompleted();
 
@@ -72,6 +79,18 @@ public class HouseManagementService extends HouseManagementImplBase{
     private Ack simpleAck(String text){
         synchronized (parent) {
             return Ack.newBuilder().setAck(true).setCoordinator(parent.coordinator).setMessage(text).build();
+        }
+
+    }
+
+    /**
+     * method that wastes some time(less than te a)
+     */
+    private void testTimeWaster(){
+        try {
+            Thread.sleep(9*1000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
 
     }
