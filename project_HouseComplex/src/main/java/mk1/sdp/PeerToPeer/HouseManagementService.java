@@ -64,7 +64,8 @@ public class HouseManagementService extends HouseManagementImplBase{
         if(toRemove!=null){
 
             try {
-                toRemove.shutdown().awaitTermination(5, TimeUnit.SECONDS);
+                if(!toRemove.isShutdown())
+                    toRemove.shutdown().awaitTermination(5, TimeUnit.SECONDS);
             } catch (InterruptedException e) {
                 printErr("[house "+id+"] interrupted while shutting connection to house "+request.getId());
             }

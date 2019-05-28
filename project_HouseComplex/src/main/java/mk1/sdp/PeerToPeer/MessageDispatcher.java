@@ -15,8 +15,7 @@ import javax.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.List;
 
-import static mk1.sdp.misc.Common.print;
-import static mk1.sdp.misc.Common.printErr;
+import static mk1.sdp.misc.Common.*;
 
 public class MessageDispatcher {
     private final int id;
@@ -93,7 +92,9 @@ public class MessageDispatcher {
 
             @Override
             public void onCompleted() {
-                p.left+=1;
+                synchronized (MessageDispatcher.this){
+                    p.left+=1;
+                }
 
                 print("[HOUSE "+id+"] successful introduction: "+p.left+"/"+copy.size());
                 if(p.right!=-1){
@@ -144,7 +145,10 @@ public class MessageDispatcher {
         };
 
         for (ManagedChannel chan:copy) {
-            if(chan.isShutdown()) continue;
+            if(chan.isShutdown()) {
+                printHigh("house"+id,"channel already closed");
+                continue;
+            }
             asyncstub=HouseManagementGrpc.newStub(chan);
             asyncstub.removeHome(selfIntro, respObs);
         }

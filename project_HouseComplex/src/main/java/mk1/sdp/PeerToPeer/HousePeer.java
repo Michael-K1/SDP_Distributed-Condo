@@ -1,5 +1,7 @@
 package mk1.sdp.PeerToPeer;
 
+import simulation_src_2019.SmartMeterSimulator;
+
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 
@@ -11,16 +13,12 @@ import mk1.sdp.misc.Pair;
 
 import static mk1.sdp.misc.Common.*;
 
-
 import org.glassfish.jersey.client.ClientConfig;
-import simulation_src_2019.SmartMeterSimulator;
-
 
 import javax.ws.rs.ProcessingException;
 import javax.ws.rs.client.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.lang.reflect.Array;
 import java.net.URI;
 import java.net.URISyntaxException;
 
@@ -243,9 +241,10 @@ public class HousePeer {
 
         mexDispatcher.removeSelfFromPeers(copy);
 
-        for(ManagedChannel x:copy){
+        for(ManagedChannel chan:copy){
             try{
-                x.shutdown().awaitTermination(10, TimeUnit.SECONDS);
+                if(!chan.isShutdown())
+                    chan.shutdown().awaitTermination(10, TimeUnit.SECONDS);
             } catch (InterruptedException e) {
                 printErr("interrupted while shutdown house "+ID);
             }
