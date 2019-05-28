@@ -6,13 +6,15 @@ import simulation_src_2019.Measurement;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Queue;
 
 public class SlidingBuffer implements Buffer {
-    private List<Pair<Long,Double>> measureList;
+    private List<Measurement> measureList;
     private int bufferDim;
     private int overlap;
     private HousePeer parent;
     private Pair<Long, Double> lastCalculated;
+//    public Queue<Pair<Long,Double>> measureQueue;
 
     public SlidingBuffer(HousePeer parent,int bufferDim, float overlap){     //0.00<=overlap<=1.00
         this.parent=parent;
@@ -23,7 +25,7 @@ public class SlidingBuffer implements Buffer {
 
     @Override
     public synchronized void addMeasurement(Measurement m) {
-        measureList.add(Pair.of(m.getTimestamp(), m.getValue()));
+        measureList.add(m);
 
         if(measureList.size()==bufferDim){
             lastCalculated= createMeanMeasure();
@@ -38,15 +40,15 @@ public class SlidingBuffer implements Buffer {
         long time=0;
         double finalMeasure=0;
 
-        for(Pair<Long,Double> x:measureList){
-            time+=x.left;
-            finalMeasure+=x.right;
+        for(Measurement x:measureList){
+
+            finalMeasure+=x.getValue();
         }
 
-        time=Math.floorDiv(time,bufferDim);
+        time=System.currentTimeMillis();    //time at the moment of creation
         finalMeasure/=bufferDim;
 
-        return Pair.of(time,finalMeasure);
+        return Pair.of(time, finalMeasure);
     }
 
 }
