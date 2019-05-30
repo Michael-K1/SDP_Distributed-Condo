@@ -5,7 +5,6 @@ import io.grpc.ManagedChannel;
 import io.grpc.stub.StreamObserver;
 import mk1.sdp.GRPC.HouseManagementGrpc;
 import mk1.sdp.GRPC.PeerMessages.*;
-import mk1.sdp.PeerToPeer.Mutex.LamportClock;
 
 import mk1.sdp.misc.Pair;
 
@@ -15,6 +14,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 //import java.util.concurrent.TimeUnit;
 
@@ -27,7 +27,7 @@ public class MessageDispatcher {
     private final int port;
     private final WebTarget toLocalStat;
     private final WebTarget toGlobalStat;
-    private LamportClock lamportClock;
+
 
     public MessageDispatcher(HousePeer parent,WebTarget server){
         this.parent=parent;
@@ -41,25 +41,50 @@ public class MessageDispatcher {
         toGlobalStat = server.path("/global/add");
     }
 
-    public void sendLocalStatistics( Pair<Long,Double> measure, int...tries){
+
+    public void sendGlobalStatistics( Pair<Long,Double> measure){
+        if (!parent.isCoordinator())return;
+
+       if( sendToServer(toGlobalStat,measure)){
+
+       }
+    }
+
+    private void sendToPeer(List<ManagedChannel> copy, Pair<Long, Double> measure) {
         if(!sendToServer(toLocalStat,measure)){
 //            if(tries.length==0)           //todo controllo se non riesce ad inviare
 //                sendLocalStatistics(measure, 1);
 //            else if (tries)
 //            return;
         }
-        List<ManagedChannel> copy;
-        synchronized (parent){
-            copy=new ArrayList<>(parent.peerList.values());
-        }
-        sendToPeer(copy,measure);
-        synchronized (parent.lamportClock) {
-            parent.lamportClock.afterEvent();
-        }
-    }
 
-    public void sendGlobalStatistics( Pair<Long,Double> measure){
-        sendToServer(toGlobalStat,measure);
+        Measure newMean= Measure.newBuilder().setSenderID(id).setTimeStamp(measure.left).setMeasurement(measure.right).build();
+
+        StreamObserver<Ack> respObs=new StreamObserver<Ack>() {
+            @Override
+            public void onNext(Ack ack) {
+
+            }
+
+            @Override
+            public void onError(Throwable throwable) {
+                if(throwable.getMessage().toUpperCase().matches("(.*)DEADLINE_EXCEEDED(.*)")){
+                    printErr("deadline problem detected");
+                    //todo start election
+                }
+            }
+
+            @Override
+            public void onCompleted() {
+
+            }
+        };
+
+
+        copy.stream().parallel().forEach(chan-> HouseManagementGrpc.newStub(chan).withDeadlineAfter(5, TimeUnit.SECONDS).sendMeasure(newMean, respObs));
+
+        parent.lamportClock.afterEvent();
+
     }
 
     private boolean sendToServer(WebTarget wt, Pair<Long, Double> measure) {   //wt is already correct //todo add check if response has error
@@ -69,15 +94,6 @@ public class MessageDispatcher {
 
         return responseHasError(resp);
 
-    }
-
-    private void sendToPeer(List<ManagedChannel> copy, Pair<Long, Double> measure) {
-        int clock=lamportClock.peekClock();
-
-        for(ManagedChannel chan:copy){
-
-
-        }
     }
 
     public void addSelfToPeers(){
@@ -105,7 +121,10 @@ public class MessageDispatcher {
             @Override
             public void onError(Throwable throwable) {
                 printErr("Async self introduction "+ throwable.getMessage());
-                throwable.getCause().printStackTrace();
+                //throwable.getCause().printStackTrace();
+                if(throwable.getMessage().toUpperCase().matches("(.*)DEADLINE_EXCEEDED(.*)")){
+                    printErr("deadline problem detected");
+                }
             }
 
             @Override
@@ -117,17 +136,18 @@ public class MessageDispatcher {
 
                 if(p.right!=-1){
                     synchronized (parent){
-                        if(parent.coordinator!=p.right)
-                            parent.coordinator=p.right;
+                        if(parent.getCoordinator() !=p.right)
+                            parent.setCoordinator(p.right);
                     }
                 }
             }
         };
 
 
-        copy.stream().parallel().forEach(chan -> HouseManagementGrpc.newStub(chan).addHome(selfIntro, respObs));
+        copy.stream().parallel().forEach(chan -> HouseManagementGrpc.newStub(chan).withDeadlineAfter(5, TimeUnit.SECONDS).addHome(selfIntro, respObs));
 
-//        HouseManagementGrpc.HouseManagementStub asyncStub;
+        HouseManagementGrpc.HouseManagementStub asyncStub;
+
 //        for (ManagedChannel chan:copy) {        //todo ma sta cosa è gia asincrona?
 ////            asyncStub=HouseManagementGrpc.newStub(chan);
 ////
@@ -163,7 +183,11 @@ public class MessageDispatcher {
             @Override
             public void onError(Throwable throwable) {
                 printErr("Async self deletion "+ throwable.getMessage());
-                throwable.printStackTrace();
+               // throwable.printStackTrace();
+                if(throwable.getMessage().toUpperCase().matches("(.*)DEADLINE_EXCEEDED(.*)")){
+                    printErr("deadline problem detected");
+                }
+
             }
 
             @Override
@@ -176,7 +200,7 @@ public class MessageDispatcher {
             }
         };
 
-        copy.stream().parallel().forEach(chan->HouseManagementGrpc.newStub(chan).removeHome(selfIntro, respObs));
+        copy.stream().parallel().forEach(chan->HouseManagementGrpc.newStub(chan).withDeadlineAfter(5, TimeUnit.SECONDS).removeHome(selfIntro, respObs));
 
 //        HouseManagementGrpc.HouseManagementStub asyncStub;
 //        for (ManagedChannel chan:copy) {

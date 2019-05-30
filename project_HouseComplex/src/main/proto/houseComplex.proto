@@ -6,8 +6,9 @@ option java_package="mk1.sdp.GRPC";
 option java_outer_classname="PeerMessages";
 
 message Measure{
-    int64 timeStamp=1;
-    double measurement=2;
+    int32 senderID=1;
+    int64 timeStamp=2;
+    double measurement=3;
 
 }
 
@@ -21,9 +22,8 @@ message Coordinator{
 
 message Ack{
     bool ack=1;
-    bool canBoost=2;
-    string message=3;
-    int32 coordinator=4;
+    string message=2;
+    int32 coordinator=3;
 }
 
 message SelfIntroduction{   //if the house comes later on needs to be added to the list of other houses
@@ -35,4 +35,6 @@ message SelfIntroduction{   //if the house comes later on needs to be added to t
 service HouseManagement{
     rpc AddHome(SelfIntroduction) returns(Ack){}
     rpc removeHome(SelfIntroduction) returns (Ack){}
+    rpc sendMeasure(Measure) returns (Ack){}
+
 }

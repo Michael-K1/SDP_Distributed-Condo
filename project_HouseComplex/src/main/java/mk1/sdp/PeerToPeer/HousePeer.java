@@ -30,7 +30,7 @@ public class HousePeer {
     public final String host;
     public final int port;
     public final String hostServer;
-    public int coordinator=-1;
+    private int coordinator=-1;
 
     private Scanner fromShell;
     private Client client;
@@ -259,5 +259,16 @@ public class HousePeer {
     public void printMeasure(Pair<Long,Double> measure){
 
         print(measure.left+" "+measure.right);
+    }
+
+    public int getCoordinator() {
+        return coordinator;
+    }
+
+    public synchronized void setCoordinator(int coordinator) {
+        this.coordinator = coordinator;
+    }
+    public synchronized boolean isCoordinator(){
+        return coordinator==this.ID;
     }
 }
