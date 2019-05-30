@@ -19,6 +19,7 @@ import javax.ws.rs.core.Response;
 import java.net.URI;
 
 import java.net.URISyntaxException;
+import java.sql.Timestamp;
 import java.util.*;
 
 import static mk1.sdp.misc.Common.responseHasError;
@@ -240,7 +241,8 @@ public class Administrator {
         printHigh("admin","output from server: ");
         print("Last "+mes.length+" statistics of "+pretty);
         for(Pair m:mes){
-            print("Time: "+m.left +" --> "+m.right +" kW"); //todo pretty print time
+            Timestamp t = new Timestamp((Long)m.left);
+            print("Time: "+t.toString() +" --> "+m.right +" kW"); //todo pretty print time
         }
 
     }

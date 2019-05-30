@@ -34,7 +34,7 @@ public class HousePeer {
 
     private Scanner fromShell;
     private Client client;
-    private WebTarget webTarget;
+    private WebTarget serverREST;
     private PeerServer listener;
 
     public final Hashtable<Integer, ManagedChannel> peerList ;
@@ -60,12 +60,13 @@ public class HousePeer {
         this.port=port;
         this.hostServer=hostServer;
         peerList = new Hashtable<>();
-        mexDispatcher=new MessageDispatcher(this);
         lamportClock = new LamportClock(ID);
 
         ClientConfig c=new ClientConfig();
         client= ClientBuilder.newClient(c);
-        webTarget=client.target(getBaseURI());//todo get input da tastiera o args
+        serverREST =client.target(getBaseURI());//todo get input da tastiera o args
+
+        mexDispatcher=new MessageDispatcher(this,serverREST);
     }
 
     private void start() {
@@ -117,18 +118,14 @@ public class HousePeer {
                     break;
                 default:
             }
-
-
-
         }
-
     }
 
 
 
     //region APPLICATION START
     private boolean registerToServer(){
-        WebTarget wt=webTarget.path("/complex/add");
+        WebTarget wt= serverREST.path("/complex/add");
         Response resp= tryConnection(wt,true);
 
         if(resp==null) return false;
@@ -205,7 +202,7 @@ public class HousePeer {
 
     //region APPLICATION END
     private boolean deleteHouse(int ...tries){
-        WebTarget wt = webTarget.path("/complex/delete").queryParam("id",ID);
+        WebTarget wt = serverREST.path("/complex/delete").queryParam("id",ID);
         Response resp=tryConnection(wt,false );
 
 
@@ -255,7 +252,9 @@ public class HousePeer {
         client.close();
     }
     //endregion
+    public void broadcastStat(Pair<Long,Double> measure){
 
+    }
 
     public void printMeasure(Pair<Long,Double> measure){
 

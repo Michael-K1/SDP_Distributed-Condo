@@ -40,6 +40,7 @@ public class Common {
         }catch(IllegalStateException e){
             printErr("scanner closed.\n attempt to reopen it...");
             fromShell=new Scanner(System.in);
+            print("press Return to continue...");
             fromShell.nextLine();
 
         }

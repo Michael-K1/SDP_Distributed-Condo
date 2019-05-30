@@ -6,6 +6,7 @@ import io.grpc.stub.StreamObserver;
 import mk1.sdp.GRPC.HouseManagementGrpc;
 import mk1.sdp.GRPC.PeerMessages.*;
 import mk1.sdp.PeerToPeer.Mutex.LamportClock;
+
 import mk1.sdp.misc.Pair;
 
 import javax.ws.rs.client.Entity;
@@ -14,6 +15,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.List;
+
 //import java.util.concurrent.TimeUnit;
 
 import static mk1.sdp.misc.Common.*;
@@ -23,19 +25,29 @@ public class MessageDispatcher {
     private final HousePeer parent;
     private final String address;
     private final int port;
+    private final WebTarget toLocalStat;
+    private final WebTarget toGlobalStat;
     private LamportClock lamportClock;
 
-    public MessageDispatcher(HousePeer parent){
+    public MessageDispatcher(HousePeer parent,WebTarget server){
         this.parent=parent;
         synchronized (this.parent){
             this.id=parent.ID;
             this.address=parent.host;
             this.port=parent.port;
         }
+
+        toLocalStat = server.path("/house/add").queryParam("id", id);
+        toGlobalStat = server.path("/global/add");
     }
 
-    public void sendStatistics(WebTarget wt, Pair<Long,Double> measure){
-        sendToServer(wt,measure);
+    public void sendLocalStatistics( Pair<Long,Double> measure, int...tries){
+        if(!sendToServer(toLocalStat,measure)){
+//            if(tries.length==0)           //todo controllo se non riesce ad inviare
+//                sendLocalStatistics(measure, 1);
+//            else if (tries)
+//            return;
+        }
         List<ManagedChannel> copy;
         synchronized (parent){
             copy=new ArrayList<>(parent.peerList.values());
@@ -46,9 +58,16 @@ public class MessageDispatcher {
         }
     }
 
-    private void sendToServer(WebTarget wt, Pair<Long, Double> measure) {   //wt is already correct //todo add check if response has error
+    public void sendGlobalStatistics( Pair<Long,Double> measure){
+        sendToServer(toGlobalStat,measure);
+    }
+
+    private boolean sendToServer(WebTarget wt, Pair<Long, Double> measure) {   //wt is already correct //todo add check if response has error
 
         Response resp = wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).put(Entity.entity(measure, MediaType.APPLICATION_JSON_TYPE));
+        if(resp==null) return false;
+
+        return responseHasError(resp);
 
     }
 
@@ -106,30 +125,26 @@ public class MessageDispatcher {
         };
 
 
-        HouseManagementGrpc.HouseManagementStub asyncStub;
-        for (ManagedChannel chan:copy) {
-            asyncStub=HouseManagementGrpc.newStub(chan);
+        copy.stream().parallel().forEach(chan -> HouseManagementGrpc.newStub(chan).addHome(selfIntro, respObs));
 
-            asyncStub.addHome(selfIntro, respObs);
-         /*   Runnable runner=new Runnable() {
-                @Override
-                public void run() {
-                    HouseManagementGrpc.HouseManagementStub asyncStub;
-                    asyncStub=HouseManagementGrpc.newStub(chan);
-
-                    asyncStub.addHome(selfIntro, respObs);
-
-                    try {
-                        chan.awaitTermination(10, TimeUnit.SECONDS);
-                    } catch (InterruptedException e) {
-                        printErr("interrupted while waiting for termination in self introduction on channel: "+chan.toString());
-                    }
-                }
-            };
-
-            new Thread(runner).start();
-*/
-        }
+//        HouseManagementGrpc.HouseManagementStub asyncStub;
+//        for (ManagedChannel chan:copy) {        //todo ma sta cosa è gia asincrona?
+////            asyncStub=HouseManagementGrpc.newStub(chan);
+////
+////            asyncStub.addHome(selfIntro, respObs);
+//            Runnable runner=new Runnable() {
+//                @Override
+//                public void run() {
+//                    HouseManagementGrpc.HouseManagementStub asyncStub;
+//                    asyncStub=HouseManagementGrpc.newStub(chan);
+//
+//                    asyncStub.addHome(selfIntro, respObs);
+//
+//                }
+//            };
+//
+//            new Thread(runner).start();
+//        }
 
         parent.lamportClock.afterEvent();
     }
@@ -161,16 +176,18 @@ public class MessageDispatcher {
             }
         };
 
-        HouseManagementGrpc.HouseManagementStub asyncStub;
-        for (ManagedChannel chan:copy) {
-            if(chan.isShutdown()) {
-                printHigh("house"+id,"channel already closed");
-                continue;
-            }
+        copy.stream().parallel().forEach(chan->HouseManagementGrpc.newStub(chan).removeHome(selfIntro, respObs));
 
-            asyncStub=HouseManagementGrpc.newStub(chan);
-            asyncStub.removeHome(selfIntro, respObs);
-        }
+//        HouseManagementGrpc.HouseManagementStub asyncStub;
+//        for (ManagedChannel chan:copy) {
+//            if(chan.isShutdown()) {
+//                printHigh("house"+id,"channel already closed");
+//                continue;
+//            }
+//
+//            asyncStub=HouseManagementGrpc.newStub(chan);
+//            asyncStub.removeHome(selfIntro, respObs);
+//        }
 
     }
 }
