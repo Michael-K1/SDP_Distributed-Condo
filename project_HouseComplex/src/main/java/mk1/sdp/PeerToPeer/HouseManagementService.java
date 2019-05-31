@@ -73,6 +73,11 @@ public class HouseManagementService extends HouseManagementImplBase{
         String s;
         if(request.getId()!=id) {//if NOT self removal
             printHigh("HOUSE "+id," trying removal of  "+sender+" from peerList....");
+
+            if(parent.isCoordinator(sender)){
+                parent.setCoordinator(-1);
+            }
+
             synchronized (parent.peerList){
                 if(parent.peerList.containsKey(sender)) {
                     parent.peerList.remove(sender);
@@ -119,15 +124,19 @@ public class HouseManagementService extends HouseManagementImplBase{
             }
             complexMeans.get(sender).offerLast(mean);
         }
-        responseObserver.onNext(littleAck());
+        responseObserver.onNext(simpleAck(""));
         responseObserver.onCompleted();
 
 
     }
 
-    private Ack littleAck(){
-        return Ack.newBuilder().setAck(true).build();
+    @Override
+    public void sendGlobalMean(Measure request, StreamObserver<Ack> responseObserver) {
+        Pair<Long, Double> globalMean = Pair.of(request.getTimeStamp(), request.getMeasurement());
+
+        printMeasure("\tGLOBAL MEAN:", globalMean);
     }
+
     private Ack simpleAck(String text){
         synchronized (parent) {
             return Ack.newBuilder().setAck(true).setCoordinator(parent.getCoordinator()).setMessage(text).build();
@@ -185,7 +194,7 @@ public class HouseManagementService extends HouseManagementImplBase{
 
             Pair<Long, Double> p = Pair.of(System.currentTimeMillis(), val[0] / count);
 
-            print("global mean: "+p.left+" -> "+p.right);
+            printMeasure("GLOBAL MEAN:",p);
 
         }
     }

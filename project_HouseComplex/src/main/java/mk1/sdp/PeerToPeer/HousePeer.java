@@ -274,6 +274,7 @@ public class HousePeer {
         return coordinator==this.ID;
     }
     public synchronized boolean isCoordinator(int id){
+        if(coordinator==-1)return false;
         return coordinator==id;
     }
 

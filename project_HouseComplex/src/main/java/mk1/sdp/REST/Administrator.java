@@ -236,7 +236,7 @@ public class Administrator {
 
         printHigh("admin","output from server: ");
         print("Last "+mes.length+" statistics of "+pretty);
-        
+
         for(Pair<Long,Double> m:convertPairs(mes)){
             printMeasure("", m);
         }

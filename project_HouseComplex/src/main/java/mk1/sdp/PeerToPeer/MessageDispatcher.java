@@ -74,6 +74,7 @@ public class MessageDispatcher {
                     if (parent.isCoordinator(x) && !respVal.right){
                         respVal.right=true;                          //the coordinator has answered
                     }
+                    printHigh("house "+id, respVal.toString()+ " x="+x);
                 }
             }
 
@@ -93,6 +94,7 @@ public class MessageDispatcher {
                     if(respVal.left==copy.size())
                         if(!respVal.right){
                             //todo indire elezione
+                            printErr("election");
                         }
 
                 }
@@ -112,7 +114,7 @@ public class MessageDispatcher {
 
         if(resp==null) return false;
 
-        return responseHasError(resp);
+        return !responseHasError(resp);
 
     }
 

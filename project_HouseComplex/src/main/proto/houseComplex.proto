@@ -36,5 +36,6 @@ service HouseManagement{
     rpc AddHome(SelfIntroduction) returns(Ack){}
     rpc removeHome(SelfIntroduction) returns (Ack){}
     rpc sendMeasure(Measure) returns (Ack){}
+    rpc sendGlobalMean(Measure) returns (Ack){}
 
 }

@@ -19,6 +19,7 @@ public class Pair<M,V>{
     public int hashCode(){
         return left.hashCode()^ right.hashCode();  //^ --> XOR
     }
+
     @Override
     public boolean equals(Object o){
         if(!(o instanceof Pair)) return false;
@@ -29,5 +30,10 @@ public class Pair<M,V>{
 	public static <M,V> Pair<M,V> of(M left, V right){
 
         return new Pair<>(left, right);
+    }
+
+    @Override
+    public String toString() {
+        return this.left.toString()+" "+this.right.toString();
     }
 }
