@@ -108,10 +108,11 @@ public class HouseManagementService extends HouseManagementImplBase{
         int sender=request.getSenderID();
         Pair<Long, Double> mean = Pair.of(request.getTimeStamp(), request.getMeasurement());
         int complexSize;
+
         synchronized (parent.peerList){
             complexSize=parent.peerList.size();
         }
-
+        printMeasure("HOUSE "+sender+" sends",mean);
         synchronized (complexMeans){
             if(!complexMeans.containsKey(sender)){
                 complexMeans.put(sender, new LinkedList<>());

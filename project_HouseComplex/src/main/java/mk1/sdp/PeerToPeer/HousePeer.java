@@ -257,10 +257,7 @@ public class HousePeer {
         mexDispatcher.sendToPeer(getPeerListCopy(), measure);
     }
 
-    public void printMeasure(Pair<Long,Double> measure){
 
-        print(new Timestamp(measure.left).toString()+" -> "+measure.right);
-    }
 
     public int getCoordinator() {
         return coordinator;

@@ -22,11 +22,7 @@ import java.net.URISyntaxException;
 import java.sql.Timestamp;
 import java.util.*;
 
-import static mk1.sdp.misc.Common.responseHasError;
-import static mk1.sdp.misc.Common.print;
-import static mk1.sdp.misc.Common.printErr;
-import static mk1.sdp.misc.Common.printHigh;
-import static mk1.sdp.misc.Common.readInputInteger;
+import static mk1.sdp.misc.Common.*;
 //https://jersey.github.io/apidocs/2.25.1/jersey/index.html
 
 public class Administrator {
@@ -240,10 +236,9 @@ public class Administrator {
 
         printHigh("admin","output from server: ");
         print("Last "+mes.length+" statistics of "+pretty);
+        
         for(Pair<Long,Double> m:convertPairs(mes)){
-
-            Timestamp t = new Timestamp(m.left);
-            print("Time: "+t.toString() +"\t-->\t"+m.right +"\tkW"); //todo pretty print time
+            printMeasure("", m);
         }
 
     }
