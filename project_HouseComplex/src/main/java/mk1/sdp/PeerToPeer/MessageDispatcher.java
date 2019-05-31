@@ -37,8 +37,8 @@ public class MessageDispatcher {
             this.port=parent.port;
         }
 
-        toLocalStat = server.path("/house/add").queryParam("id", id);
-        toGlobalStat = server.path("/global/add");
+        toLocalStat = server.path("/complex/house/add").queryParam("id", id);
+        toGlobalStat = server.path("/complex/global/add");
     }
 
 
@@ -50,20 +50,31 @@ public class MessageDispatcher {
        }
     }
 
-    private void sendToPeer(List<ManagedChannel> copy, Pair<Long, Double> measure) {
+    public void sendToPeer(List<ManagedChannel> copy, Pair<Long, Double> measure) {
+
+
         if(!sendToServer(toLocalStat,measure)){
 //            if(tries.length==0)           //todo controllo se non riesce ad inviare
 //                sendLocalStatistics(measure, 1);
 //            else if (tries)
-//            return;
+
+            return;
         }
 
         Measure newMean= Measure.newBuilder().setSenderID(id).setTimeStamp(measure.left).setMeasurement(measure.right).build();
 
+
+        Pair<Integer, Boolean> respVal = Pair.of(0, false);
+
         StreamObserver<Ack> respObs=new StreamObserver<Ack>() {
             @Override
             public void onNext(Ack ack) {
-
+                synchronized (MessageDispatcher.this){
+                    int x=ack.getCoordinator();
+                    if (parent.isCoordinator(x) && !respVal.right){
+                        respVal.right=true;                          //the coordinator has answered
+                    }
+                }
             }
 
             @Override
@@ -76,7 +87,15 @@ public class MessageDispatcher {
 
             @Override
             public void onCompleted() {
+                synchronized (MessageDispatcher.this){
+                    respVal.left+=1;
 
+                    if(respVal.left==copy.size())
+                        if(!respVal.right){
+                            //todo indire elezione
+                        }
+
+                }
             }
         };
 
@@ -87,26 +106,27 @@ public class MessageDispatcher {
 
     }
 
-    private boolean sendToServer(WebTarget wt, Pair<Long, Double> measure) {   //wt is already correct //todo add check if response has error
+    private boolean sendToServer(WebTarget wt, Pair<Long, Double> measure) {   //wt is already correct
 
         Response resp = wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).put(Entity.entity(measure, MediaType.APPLICATION_JSON_TYPE));
+
         if(resp==null) return false;
 
         return responseHasError(resp);
 
     }
 
-    public void addSelfToPeers(){
+    public void addSelfToPeers(List<ManagedChannel> copy){
         SelfIntroduction selfIntro = SelfIntroduction.newBuilder().setId(id).setAddress(address).setPort(port).build();
 
 
-        List<ManagedChannel> copy ;
-        synchronized (parent.peerList){
-            copy = new ArrayList<>(parent.peerList.values());
-        }
+
+
 
         final  Pair<Integer, Integer> p = Pair.of(0,-1);
+
         StreamObserver<Ack> respObs=new StreamObserver<Ack>() {
+
             @Override
             public void onNext(Ack ack) {
                 if(ack.getAck()){
@@ -129,6 +149,7 @@ public class MessageDispatcher {
 
             @Override
             public void onCompleted() {
+
                 synchronized (MessageDispatcher.this){
                     p.left+=1;
                     print("[HOUSE "+id+"] successful introduction: "+p.left+"/"+copy.size());
@@ -146,25 +167,6 @@ public class MessageDispatcher {
 
         copy.stream().parallel().forEach(chan -> HouseManagementGrpc.newStub(chan).withDeadlineAfter(5, TimeUnit.SECONDS).addHome(selfIntro, respObs));
 
-        HouseManagementGrpc.HouseManagementStub asyncStub;
-
-//        for (ManagedChannel chan:copy) {        //todo ma sta cosa è gia asincrona?
-////            asyncStub=HouseManagementGrpc.newStub(chan);
-////
-////            asyncStub.addHome(selfIntro, respObs);
-//            Runnable runner=new Runnable() {
-//                @Override
-//                public void run() {
-//                    HouseManagementGrpc.HouseManagementStub asyncStub;
-//                    asyncStub=HouseManagementGrpc.newStub(chan);
-//
-//                    asyncStub.addHome(selfIntro, respObs);
-//
-//                }
-//            };
-//
-//            new Thread(runner).start();
-//        }
 
         parent.lamportClock.afterEvent();
     }
@@ -201,17 +203,5 @@ public class MessageDispatcher {
         };
 
         copy.stream().parallel().forEach(chan->HouseManagementGrpc.newStub(chan).withDeadlineAfter(5, TimeUnit.SECONDS).removeHome(selfIntro, respObs));
-
-//        HouseManagementGrpc.HouseManagementStub asyncStub;
-//        for (ManagedChannel chan:copy) {
-//            if(chan.isShutdown()) {
-//                printHigh("house"+id,"channel already closed");
-//                continue;
-//            }
-//
-//            asyncStub=HouseManagementGrpc.newStub(chan);
-//            asyncStub.removeHome(selfIntro, respObs);
-//        }
-
     }
 }

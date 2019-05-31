@@ -6,7 +6,6 @@ import simulation_src_2019.Measurement;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Queue;
 
 public class SlidingBuffer implements Buffer {
     private List<Measurement> measureList;
@@ -28,7 +27,8 @@ public class SlidingBuffer implements Buffer {
         measureList.add(m);
 
         if(measureList.size()==bufferDim){
-            parent.broadcastStat( createMeanMeasure());
+            lastCalculated =createMeanMeasure();
+            parent.broadcastLocalStat(lastCalculated);
             //parent.printMeasure(lastCalculated);
             int size=measureList.size();
             measureList=measureList.subList(overlap, size);

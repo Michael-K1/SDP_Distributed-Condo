@@ -22,6 +22,7 @@ import javax.ws.rs.core.Response;
 import java.net.URI;
 import java.net.URISyntaxException;
 
+import java.sql.Timestamp;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
@@ -184,7 +185,7 @@ public class HousePeer {
             peerList.put(x.HomeID,channel);
         }
 
-        mexDispatcher.addSelfToPeers();
+        mexDispatcher.addSelfToPeers(getPeerListCopy());
         lamportClock.afterEvent();
     }
 
@@ -230,10 +231,9 @@ public class HousePeer {
             return;
         }
 
-        ArrayList<ManagedChannel> copy =null;
+        List<ManagedChannel> copy =getPeerListCopy();
 
         synchronized (peerList){
-            copy=new ArrayList<>(peerList.values());
             peerList.clear();
         }
 
@@ -252,17 +252,22 @@ public class HousePeer {
         client.close();
     }
     //endregion
-    public void broadcastStat(Pair<Long,Double> measure){
 
+    public void broadcastLocalStat(Pair<Long,Double> measure){
+        mexDispatcher.sendToPeer(getPeerListCopy(), measure);
     }
 
     public void printMeasure(Pair<Long,Double> measure){
 
-        print(measure.left+" "+measure.right);
+        print(new Timestamp(measure.left).toString()+" -> "+measure.right);
     }
 
     public int getCoordinator() {
         return coordinator;
+    }
+
+    public MessageDispatcher getMexDispatcher() {
+        return mexDispatcher;
     }
 
     public synchronized void setCoordinator(int coordinator) {
@@ -270,5 +275,16 @@ public class HousePeer {
     }
     public synchronized boolean isCoordinator(){
         return coordinator==this.ID;
+    }
+    public synchronized boolean isCoordinator(int id){
+        return coordinator==id;
+    }
+
+    public  List<ManagedChannel> getPeerListCopy(){
+        List<ManagedChannel> copy;
+        synchronized (peerList){
+             copy = new ArrayList<>(peerList.values());
+        }
+        return copy;
     }
 }

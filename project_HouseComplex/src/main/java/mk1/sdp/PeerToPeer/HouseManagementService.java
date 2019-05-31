@@ -135,6 +135,7 @@ public class HouseManagementService extends HouseManagementImplBase{
     }
 
     private void startScheduler(){
+        if(timer!=null)return;
         timer= new Timer("daemonMeanCalculator");
         timer.schedule(new MeanCalculationTask(), 0,5000);
     }
@@ -183,7 +184,7 @@ public class HouseManagementService extends HouseManagementImplBase{
 
             Pair<Long, Double> p = Pair.of(System.currentTimeMillis(), val[0] / count);
 
-            print(p.left+" "+p.right);
+            print("global mean: "+p.left+" -> "+p.right);
 
         }
     }
