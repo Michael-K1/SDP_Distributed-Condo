@@ -101,7 +101,7 @@ public class HouseManagementService extends HouseManagementImplBase{
         responseObserver.onNext(simpleAck(s));
         responseObserver.onCompleted();
 
-        if(parent.isCoordinator()){
+        if(parent.isCoordinator(sender)){
             stopScheduler();
         }
 
@@ -182,7 +182,7 @@ public class HouseManagementService extends HouseManagementImplBase{
                     }
                 }
             }
-
+//            print("\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tPRIMA "+count);
             if (count==0) {
 //                print("no mean yet");
 //                print(new Timestamp(System.currentTimeMillis()).toString());
@@ -193,7 +193,7 @@ public class HouseManagementService extends HouseManagementImplBase{
             pairs.forEach(p-> val[0] +=p.right);
 
             Pair<Long, Double> p = Pair.of(System.currentTimeMillis(), val[0] / count);
-
+//            print("\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tDOPO "+val[0]+" -> "+count);
             printMeasure("GLOBAL MEAN:",p);
 
         }
