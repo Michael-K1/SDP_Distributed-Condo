@@ -12,11 +12,11 @@ import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 //import java.util.concurrent.TimeUnit;
+
 
 import static mk1.sdp.misc.Common.*;
 
@@ -41,19 +41,42 @@ public class MessageDispatcher {
         toGlobalStat = server.path("/complex/global/add");
     }
 
-
+    //region NETWORK MESSAGES
     public void sendGlobalStatistics( Pair<Long,Double> measure){
         if (!parent.isCoordinator())return;
 
-       if( sendToServer(toGlobalStat,measure)){
+        if(sendToServer(toGlobalStat, measure)) {
+            return;
+        }
 
-       }
+        List<ManagedChannel> copy=parent.getFullPeerListCopy();
+
+        Measure globalMean= Measure.newBuilder().setMeasurement(measure.right).setTimeStamp(measure.left).build();
+
+        StreamObserver<Ack> respObs=new StreamObserver<Ack>() {
+            @Override
+            public void onNext(Ack ack) {
+
+            }
+
+            @Override
+            public void onError(Throwable throwable) {
+
+            }
+
+            @Override
+            public void onCompleted() {
+
+            }
+        };
+
+        copy.stream().parallel().forEach(chan->HouseManagementGrpc.newStub(chan).withDeadlineAfter(5, TimeUnit.SECONDS).sendGlobalMean(globalMean,respObs));
     }
 
     public void sendToPeer(List<ManagedChannel> copy, Pair<Long, Double> measure) {
 
 
-        if(!sendToServer(toLocalStat,measure)){
+        if(sendToServer(toLocalStat, measure)){
 //            if(tries.length==0)           //todo controllo se non riesce ad inviare
 //                sendLocalStatistics(measure, 1);
 //            else if (tries)
@@ -74,7 +97,7 @@ public class MessageDispatcher {
                     if (parent.isCoordinator(x) && !respVal.right){
                         respVal.right=true;                          //the coordinator has answered
                     }
-                    printHigh("house "+id, respVal.toString()+ " x="+x);
+                    //printHigh("house "+id, respVal.toString()+ " x="+x);
                 }
             }
 
@@ -94,7 +117,9 @@ public class MessageDispatcher {
                     if(respVal.left==copy.size())
                         if(!respVal.right){
                             //todo indire elezione
-                            printErr("election");
+                            printErr("election needed");
+
+
                         }
 
                 }
@@ -112,9 +137,9 @@ public class MessageDispatcher {
 
         Response resp = wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).put(Entity.entity(measure, MediaType.APPLICATION_JSON_TYPE));
 
-        if(resp==null) return false;
+        if(resp==null) return true;
 
-        return !responseHasError(resp);
+        return responseHasError(resp);
 
     }
 
@@ -206,4 +231,62 @@ public class MessageDispatcher {
 
         copy.stream().parallel().forEach(chan->HouseManagementGrpc.newStub(chan).withDeadlineAfter(5, TimeUnit.SECONDS).removeHome(selfIntro, respObs));
     }
+
+    public void startElection(){
+        List<ManagedChannel> copy = parent.getGTPeerListCopy();
+        if(copy.size()==0){
+
+        }
+
+        StreamObserver<Ack> respObs=new StreamObserver<Ack>() {
+            @Override
+            public void onNext(Ack ack) {
+
+            }
+
+            @Override
+            public void onError(Throwable throwable) {
+                if(throwable.getMessage().toUpperCase().matches("(.*)DEADLINE_EXCEEDED(.*)")){
+                    printErr("deadline problem detected");
+                    becomeCoordinator();//I am new coordinator
+                }
+            }
+
+            @Override
+            public void onCompleted() {
+
+            }
+        };
+        copy.stream().parallel().forEach(chan->HouseManagementGrpc.newStub(chan).withDeadlineAfter(5, TimeUnit.SECONDS).election(null, respObs));
+    }
+
+    private void becomeCoordinator() {
+        Coordinator coord= Coordinator.newBuilder().setCoordinatorID(id).build();
+        List<ManagedChannel> copy=parent.getFullPeerListCopy();
+
+        final Pair<Integer, Integer> pair = Pair.of(0, 0);
+
+        StreamObserver<Ack> respObs=new StreamObserver<Ack>() {
+            @Override
+            public void onNext(Ack ack) {
+                print(ack.getMessage());
+            }
+
+            @Override
+            public void onError(Throwable throwable) {
+
+            }
+
+            @Override
+            public void onCompleted() {
+                    synchronized (MessageDispatcher.this){
+                        pair.left+=1;
+                        print("[HOUSE "+id+"] houses notified: "+pair.left+"/"+copy.size());
+                    }
+            }
+        };
+
+        copy.stream().parallel().forEach(chan->HouseManagementGrpc.newStub(chan).newCoordinator(coord, respObs));
+    }
+    //endregion
 }

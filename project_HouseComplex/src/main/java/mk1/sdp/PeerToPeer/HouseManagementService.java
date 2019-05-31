@@ -31,6 +31,7 @@ public class HouseManagementService extends HouseManagementImplBase{
 
 
     }
+    //region RPCs
 
     @Override
     public void addHome(SelfIntroduction request, StreamObserver<Ack> responseObserver) {
@@ -117,7 +118,7 @@ public class HouseManagementService extends HouseManagementImplBase{
         synchronized (parent.peerList){
             complexSize=parent.peerList.size();
         }
-        printMeasure("HOUSE "+sender+" sends",mean);
+        //printMeasure("HOUSE "+sender+" sends",mean);
         synchronized (complexMeans){
             if(!complexMeans.containsKey(sender)){
                 complexMeans.put(sender, new LinkedList<>());
@@ -134,8 +135,29 @@ public class HouseManagementService extends HouseManagementImplBase{
     public void sendGlobalMean(Measure request, StreamObserver<Ack> responseObserver) {
         Pair<Long, Double> globalMean = Pair.of(request.getTimeStamp(), request.getMeasurement());
 
-        printMeasure("\tGLOBAL MEAN:", globalMean);
+        printMeasure("\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tGLOBAL MEAN:", globalMean);
+
+        responseObserver.onNext(simpleAck(""));
+        responseObserver.onCompleted();
     }
+
+    @Override
+    public void election(Coordinator request, StreamObserver<Ack> responseObserver) {
+
+    }
+
+    @Override
+    public void newCoordinator(Coordinator request, StreamObserver<Ack> responseObserver) {
+        int coord=request.getCoordinatorID();
+        parent.setCoordinator(coord);
+        responseObserver.onNext(simpleAck("[REMOTE "+id+"]new Coordinator is "+coord));
+        responseObserver.onCompleted();
+
+        if(parent.isCoordinator()){
+            startScheduler();
+        }
+    }
+    //endregion
 
     private Ack simpleAck(String text){
         synchronized (parent) {
@@ -169,7 +191,7 @@ public class HouseManagementService extends HouseManagementImplBase{
     }
 
     private class MeanCalculationTask extends TimerTask{
-
+        MessageDispatcher mex=parent.getMexDispatcher();
         @Override
         public void run() {
             int count=0;
@@ -192,9 +214,9 @@ public class HouseManagementService extends HouseManagementImplBase{
             final double[] val = {0};
             pairs.forEach(p-> val[0] +=p.right);
 
-            Pair<Long, Double> p = Pair.of(System.currentTimeMillis(), val[0] / count);
+            Pair<Long, Double> globalMean = Pair.of(System.currentTimeMillis(), val[0] / count);
 //            print("\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tDOPO "+val[0]+" -> "+count);
-            printMeasure("GLOBAL MEAN:",p);
+            mex.sendGlobalStatistics(globalMean);
 
         }
     }

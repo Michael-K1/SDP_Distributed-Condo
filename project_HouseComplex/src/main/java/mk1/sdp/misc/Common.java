@@ -16,7 +16,7 @@ public class Common {
     public static void print(String s){ System.out.println(s);}
     public static void printMeasure(String s,Pair<Long,Double> m){
         time.setTime(m.left);
-        print(s+" "+time.toString()+"\t->\t"+m.right+"\tkW");
+        print(s+" "+time.toString()+"\t--->\t"+m.right+"\tkW");
 
     }
 

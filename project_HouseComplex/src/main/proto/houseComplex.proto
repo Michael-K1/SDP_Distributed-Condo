@@ -18,6 +18,7 @@ message RequestBoost{
 }
 message Coordinator{
     int32 coordinatorID=1;
+    int32 sender=2;
 }
 
 message Ack{
@@ -37,5 +38,7 @@ service HouseManagement{
     rpc removeHome(SelfIntroduction) returns (Ack){}
     rpc sendMeasure(Measure) returns (Ack){}
     rpc sendGlobalMean(Measure) returns (Ack){}
+    rpc election(Coordinator) returns(Ack){}
+    rpc newCoordinator(Coordinator) returns (Ack){}
 
 }

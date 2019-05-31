@@ -22,7 +22,6 @@ import javax.ws.rs.core.Response;
 import java.net.URI;
 import java.net.URISyntaxException;
 
-import java.sql.Timestamp;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
@@ -185,7 +184,7 @@ public class HousePeer {
             peerList.put(x.HomeID,channel);
         }
 
-        mexDispatcher.addSelfToPeers(getPeerListCopy());
+        mexDispatcher.addSelfToPeers(getFullPeerListCopy());
         lamportClock.afterEvent();
     }
 
@@ -231,7 +230,7 @@ public class HousePeer {
             return;
         }
 
-        List<ManagedChannel> copy =getPeerListCopy();
+        List<ManagedChannel> copy = getFullPeerListCopy();
 
         synchronized (peerList){
             peerList.clear();
@@ -254,7 +253,7 @@ public class HousePeer {
     //endregion
 
     public void broadcastLocalStat(Pair<Long,Double> measure){
-        mexDispatcher.sendToPeer(getPeerListCopy(), measure);
+        mexDispatcher.sendToPeer(getFullPeerListCopy(), measure);
     }
 
 
@@ -267,8 +266,10 @@ public class HousePeer {
         return mexDispatcher;
     }
 
-    public synchronized void setCoordinator(int coordinator) {
-        this.coordinator = coordinator;
+    public synchronized void setCoordinator(int coord) {
+        if(this.coordinator==coord)return;
+
+        this.coordinator = coord;
     }
     public synchronized boolean isCoordinator(){
         return coordinator==this.ID;
@@ -278,11 +279,22 @@ public class HousePeer {
         return coordinator==id;
     }
 
-    public  List<ManagedChannel> getPeerListCopy(){
+    public  List<ManagedChannel> getFullPeerListCopy(){
         List<ManagedChannel> copy;
         synchronized (peerList){
              copy = new ArrayList<>(peerList.values());
         }
         return copy;
+    }
+
+    public List<ManagedChannel> getGTPeerListCopy() {   //greater id then this.is
+        List<ManagedChannel> tmp=new ArrayList<>();
+        synchronized (peerList){
+            for (Integer key : peerList.keySet()) {
+                if(key>this.ID)
+                    tmp.add(peerList.get(key));
+            }
+        }
+        return tmp;
     }
 }
