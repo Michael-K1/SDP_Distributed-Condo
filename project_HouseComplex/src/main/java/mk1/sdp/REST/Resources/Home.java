@@ -23,7 +23,11 @@ public class Home {
         this.HomeID=homeID;
         this.address=address;
         this.listeningPort=listeningPort;
-        measureList = new ArrayList<>();;
+        measureList = new ArrayList<>();
+    }
+
+    public Home(Home h){
+        this(h.HomeID,h.address,h.listeningPort);
     }
 
     public synchronized boolean AddMeasure(Pair<Long,Double> m){

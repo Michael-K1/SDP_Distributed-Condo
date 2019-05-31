@@ -29,11 +29,11 @@ public class ComplexService {
     public Response serviceAddHouse(Home h){
 
         if(Complex.getInstance().addHouse(h)) {
-            ArrayList<Home> copy;
+            List<Home> copy;
             synchronized (Complex.getInstance().complex){                       //synced to obtain the most recent copy of houses in the NETWORK
                 copy=new ArrayList<>(Complex.getInstance().complex.values());
             }
-            copy=removeStatistics(copy);
+            copy=removeStatistics( copy);
             return Response.ok(copy, MediaType.APPLICATION_JSON).build();
         }
         return Response.status(Response.Status.CONFLICT).entity("there is already an house with ID="+h.HomeID).build();
@@ -167,9 +167,12 @@ public class ComplexService {
         return Pair.of(null,home);
     }
 
-    private ArrayList<Home> removeStatistics(ArrayList<Home> copy) {
+    private List<Home> removeStatistics(List<Home> copy) {
+        List<Home> cp=new ArrayList<>();
 
-        copy.forEach(Home::eraseMeasurementList);
-        return copy;
+        for (Home h : copy) {
+            cp.add(new Home(h));
+        }
+        return cp;
     }
 }

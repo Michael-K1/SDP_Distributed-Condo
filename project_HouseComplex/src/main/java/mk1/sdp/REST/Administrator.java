@@ -240,8 +240,9 @@ public class Administrator {
 
         printHigh("admin","output from server: ");
         print("Last "+mes.length+" statistics of "+pretty);
-        for(Pair m:mes){
-            Timestamp t = new Timestamp((Long)m.left);
+        for(Pair<Long,Double> m:convertPairs(mes)){
+
+            Timestamp t = new Timestamp(m.left);
             print("Time: "+t.toString() +" --> "+m.right +" kW"); //todo pretty print time
         }
 
@@ -267,5 +268,19 @@ public class Administrator {
     }
     //endregion
 
+    private List<Pair<Long,Double>> convertPairs(Pair[] origin){
+        List<Pair<Long,Double>> tmp=new ArrayList<>();
+
+        for (Pair x:origin) {
+
+            Integer x1=(Integer)x.left;
+            Double x2=(Double)x.right;
+
+            tmp.add(Pair.of(x1.longValue(), x2));
+
+        }
+        return tmp;
+
+    }
 
 }

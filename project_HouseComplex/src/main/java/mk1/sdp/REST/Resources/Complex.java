@@ -49,7 +49,7 @@ public class Complex {
 
         } else{
             complex.put(h.HomeID, h);
-            h.AddMeasure(Pair.of(5L, 10.0d));   //todo MOCK
+
 
 
         }
