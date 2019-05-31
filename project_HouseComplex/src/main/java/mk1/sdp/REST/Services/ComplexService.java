@@ -149,8 +149,8 @@ public class ComplexService {
             return Pair.of(resp,null );
         }
 
-        if(pair.left instanceof Integer && pair.right instanceof Double){
-            long v1=((Integer) pair.left).longValue();
+        if(pair.left instanceof Long && pair.right instanceof Double){
+            long v1=(Long) pair.left;
             double v2=(Double)pair.right;
             return Pair.of(null, Pair.of(v1,v2));
         }

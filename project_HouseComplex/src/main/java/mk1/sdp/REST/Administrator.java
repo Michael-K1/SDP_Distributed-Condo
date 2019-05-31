@@ -243,7 +243,7 @@ public class Administrator {
         for(Pair<Long,Double> m:convertPairs(mes)){
 
             Timestamp t = new Timestamp(m.left);
-            print("Time: "+t.toString() +" --> "+m.right +" kW"); //todo pretty print time
+            print("Time: "+t.toString() +"\t-->\t"+m.right +"\tkW"); //todo pretty print time
         }
 
     }
@@ -273,10 +273,10 @@ public class Administrator {
 
         for (Pair x:origin) {
 
-            Integer x1=(Integer)x.left;
+            long x1=(Long)x.left;
             Double x2=(Double)x.right;
 
-            tmp.add(Pair.of(x1.longValue(), x2));
+            tmp.add(Pair.of(x1, x2));
 
         }
         return tmp;
