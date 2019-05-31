@@ -225,8 +225,8 @@ public class Administrator {
     }
 
     private void printStatistics(Response resp, int id){
-        String pretty=    id==-1?"the Complex :":"House "+id+":";
-        String prettyErr= id==-1?"The Complex":"Thh House "+id;
+        String pretty=    id==-1?"Complex :":"House "+id+":";
+        String prettyErr= id==-1?"Complex":"House "+id;
 
         Pair[] mes=resp.readEntity(Pair[].class);
         if(mes==null || mes.length<1){
@@ -238,7 +238,7 @@ public class Administrator {
         print("Last "+mes.length+" statistics of "+pretty);
 
         for(Pair<Long,Double> m:convertPairs(mes)){
-            printMeasure("", m);
+            printMeasure(pretty, m);
         }
 
     }

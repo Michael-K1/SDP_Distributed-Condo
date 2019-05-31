@@ -4,19 +4,21 @@ import org.jetbrains.annotations.NotNull;
 
 import javax.ws.rs.core.Response;
 import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
 import java.util.InputMismatchException;
 import java.util.NoSuchElementException;
 import java.util.Scanner;
 
 public class Common {
     private static Timestamp time =new Timestamp(System.currentTimeMillis());
+    private static SimpleDateFormat formatter=new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
 
     public static void printErr(String s){ System.err.println("[ERROR]: "+s.toUpperCase()+"...");}
     public static void printHigh(String who,String s){ System.out.println("["+who.toUpperCase()+"]: "+s.toUpperCase());}
     public static void print(String s){ System.out.println(s);}
     public static void printMeasure(String s,Pair<Long,Double> m){
         time.setTime(m.left);
-        print(s+" "+time.toString()+"\t--->\t"+m.right+"\tkW");
+        print(s+" "+formatter.format(time)+"\t--->\t"+m.right+"\tkW");
 
     }
 
