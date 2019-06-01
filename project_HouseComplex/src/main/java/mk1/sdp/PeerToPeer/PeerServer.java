@@ -18,7 +18,7 @@ public class PeerServer implements Runnable{
     private final HousePeer parent;
 
     public PeerServer(HousePeer parent){
-        this.id=parent.ID;
+        this.id=parent.HomeID;
         this.address=parent.host;
         this.port=parent.port;
         this.parent=parent;

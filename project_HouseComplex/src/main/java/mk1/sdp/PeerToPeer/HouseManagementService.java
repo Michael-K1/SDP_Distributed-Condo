@@ -14,15 +14,17 @@ import static mk1.sdp.misc.Common.*;
 
 public class HouseManagementService extends HouseManagementImplBase{
     private final HousePeer parent;
-    private final int id;
+    private final int homeID;
     private final LamportClock lampClock;
     private final Hashtable<Integer, LinkedList<Pair<Long,Double>>> complexMeans;
     private  Timer timer;
+    private final MessageDispatcher mexDispatcher;
 
     public HouseManagementService(HousePeer parent){
         this.parent=parent;
-        this.id=parent.ID;
+        this.homeID =parent.HomeID;
         lampClock =parent.lamportClock;
+        mexDispatcher=parent.getMexDispatcher();
         complexMeans =new Hashtable<>();
     }
 
@@ -37,8 +39,8 @@ public class HouseManagementService extends HouseManagementImplBase{
         synchronized (parent.peerList){
             if(!parent.peerList.containsKey(sender)){
                 parent.peerList.put(sender,channel);
-                s="[REMOTE "+id+"] added "+sender+" to peerList.\t Hello!";
-                print("[HOUSE "+id+"] added "+sender+" to peerList.");
+                s="[REMOTE "+ homeID +"] added "+sender+" to peerList.\t Hello!";
+                print("[HOUSE "+ homeID +"] added "+sender+" to peerList.");
 
                 synchronized (complexMeans){
                     if(!complexMeans.containsKey(sender)){
@@ -47,13 +49,13 @@ public class HouseManagementService extends HouseManagementImplBase{
                 }
             }else {
                 channel.shutdown();
-                s="[REMOTE "+id+"] says Hello!";
+                s="[REMOTE "+ homeID +"] says Hello!";
             }
         }
 
         //testTimeWaster();
 
-        responseObserver.onNext(simpleAck(s));
+        responseObserver.onNext(simpleAck(true, s));
         responseObserver.onCompleted();
 
 //        if(parent.isCoordinator()){
@@ -67,8 +69,8 @@ public class HouseManagementService extends HouseManagementImplBase{
         int sender=request.getId();
 
         String s;
-        if(request.getId()!=id) {//if NOT self removal
-            printHigh("HOUSE "+id," trying removal of  "+sender+" from peerList....");
+        if(request.getId()!= homeID) {//if NOT self removal
+            printHigh("HOUSE "+ homeID," trying removal of  "+sender+" from peerList....");
 
             if(parent.isCoordinator(sender)){
                 parent.setCoordinator(-1);
@@ -77,24 +79,24 @@ public class HouseManagementService extends HouseManagementImplBase{
             synchronized (parent.peerList){
                 if(parent.peerList.containsKey(sender)) {
                     parent.peerList.remove(sender);
-                    s = "[REMOTE " + id + "] removed from peerList ";
-                    printHigh("HOUSE "+id," removal of "+sender+" COMPLETED!");
+                    s = "[REMOTE " + homeID + "] removed from peerList ";
+                    printHigh("HOUSE "+ homeID," removal of "+sender+" COMPLETED!");
 
                     synchronized (complexMeans){
                         complexMeans.remove(sender);
                     }
                 }else
-                    s=s= "[REMOTE " + id + "] peer "+sender+" not present";
+                    s=s= "[REMOTE " + homeID + "] peer "+sender+" not present";
             }
 
         }else{
-            s="[HOUSE"+id+"] self deletion completed";
+            s="[HOUSE"+ homeID +"] self deletion completed";
 
 
         }
         //testTimeWaster();
 
-        responseObserver.onNext(simpleAck(s));
+        responseObserver.onNext(simpleAck(true,s));
         responseObserver.onCompleted();
 
         if(parent.isCoordinator()){
@@ -114,7 +116,7 @@ public class HouseManagementService extends HouseManagementImplBase{
             }
             complexMeans.get(sender).offerLast(mean);
         }
-        responseObserver.onNext(simpleAck(""));
+        responseObserver.onNext(simpleAck(true,""));
         responseObserver.onCompleted();
     }
 
@@ -124,7 +126,7 @@ public class HouseManagementService extends HouseManagementImplBase{
 
         printMeasure("\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tGLOBAL MEAN:", globalMean);
 
-        responseObserver.onNext(simpleAck(""));
+        responseObserver.onNext(simpleAck(true,""));
         responseObserver.onCompleted();
 
     }
@@ -132,7 +134,7 @@ public class HouseManagementService extends HouseManagementImplBase{
     @Override
     public void election(Coordinator request, StreamObserver<Ack> responseObserver) {
         testTimeWaster();
-        responseObserver.onNext(simpleAck("[REMOTE "+id+"]"));
+        responseObserver.onNext(simpleAck(true,""));
         responseObserver.onCompleted();
 
 
@@ -143,7 +145,7 @@ public class HouseManagementService extends HouseManagementImplBase{
         int coord=request.getCoordinatorID();
         parent.setCoordinator(coord);
         testTimeWaster();
-        responseObserver.onNext(simpleAck("[REMOTE "+id+"] NEW COORDINATOR IS: "+coord));
+        responseObserver.onNext(simpleAck(true,"NEW COORDINATOR IS: "+coord));
         responseObserver.onCompleted();
 
 
@@ -152,12 +154,35 @@ public class HouseManagementService extends HouseManagementImplBase{
             startScheduler();
         }
     }
+
+    @Override
+    public void boostRequest(RequestBoost request, StreamObserver<Ack> responseObserver) {
+        int sender=request.getRequester();
+        Pair<Integer, Integer> otherClock = Pair.of(sender, request.getLamportTimestamp());
+
+        printHigh("house "+homeID, sender+" requested to boost");
+        if(mexDispatcher.isInBoost()){
+            mexDispatcher.enqueue(sender);
+            printHigh("house "+homeID, " permission denied to "+sender);
+            responseObserver.onNext(simpleAck(false, "PERMISSION TO BOOST DENIED"));
+            responseObserver.onCompleted();
+
+        }else {
+            responseObserver.onNext(simpleAck(true,"PERMISSION TO BOOST GRANTED"));
+            responseObserver.onCompleted();
+        }
+    }
+
+    @Override
+    public void boostResponse(ResponseBoost request, StreamObserver<Ack> responseObserver) {
+
+    }
     //endregion
 
-    private Ack simpleAck(String text){
+    private Ack simpleAck(boolean val,String text){
         lampClock.afterEvent();
         synchronized (parent) {
-            return Ack.newBuilder().setAck(true).setCoordinator(parent.getCoordinator()).setMessage(text).setLamportTimestamp(lampClock.peekClock()).setSender(id).build();
+            return Ack.newBuilder().setAck(val).setCoordinator(parent.getCoordinator()).setMessage("[REMOTE "+homeID+"] "+text).setLamportTimestamp(lampClock.peekClock()).setSender(homeID).build();
         }
     }
 
@@ -186,7 +211,7 @@ public class HouseManagementService extends HouseManagementImplBase{
     }
 
     private class MeanCalculationTask extends TimerTask{
-        private MessageDispatcher mex=parent.getMexDispatcher();
+
         private List<Pair<Long,Double>> pairs=new ArrayList<>();
 
         @Override
@@ -209,12 +234,12 @@ public class HouseManagementService extends HouseManagementImplBase{
             final double[] val = {0};
             pairs.forEach(p-> val[0] +=p.right);
 
-//            pairs.forEach(p->printHigh("coord "+id,"single value "+p.right));
-//            printHigh("coord "+id,"sum of the local means "+val[0]+" with n° Peer= "+pairs.size());
+//            pairs.forEach(p->printHigh("coord "+homeID,"single value "+p.right));
+//            printHigh("coord "+homeID,"sum of the local means "+val[0]+" with n° Peer= "+pairs.size());
 
             Pair<Long, Double> globalMean = Pair.of(System.currentTimeMillis(), val[0] / pairs.size());
             pairs.clear();
-            mex.sendGlobalStatistics(globalMean);
+            mexDispatcher.sendGlobalStatistics(globalMean);
         }
     }
 }

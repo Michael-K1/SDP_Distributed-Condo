@@ -1,5 +1,6 @@
 package mk1.sdp.PeerToPeer;
 
+import simulation_src_2019.Simulator;
 import simulation_src_2019.SmartMeterSimulator;
 
 import io.grpc.ManagedChannel;
@@ -26,7 +27,7 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 public class HousePeer {
-    public final int ID;
+    public final int HomeID;
     public final String host;
     public final int port;
     public final String hostServer;
@@ -39,8 +40,10 @@ public class HousePeer {
 
     public final Hashtable<Integer, ManagedChannel> peerList ;
     public SmartMeterSimulator simulator;
-    public final LamportClock lamportClock;
     private final MessageDispatcher mexDispatcher;
+
+    public final LamportClock lamportClock;
+
 
     public  static void main (String[] args){
         Random rand=new Random(System.nanoTime());
@@ -55,12 +58,12 @@ public class HousePeer {
     }
 
     private HousePeer(int ID,String host,int port, String hostServer){
-        this.ID=ID;
+        this.HomeID =ID;
         this.host=host;
         this.port=port;
         this.hostServer=hostServer;
         peerList = new Hashtable<>();
-        lamportClock = new LamportClock(ID);
+        lamportClock = new LamportClock(HomeID);
 
         ClientConfig c=new ClientConfig();
         client= ClientBuilder.newClient(c);
@@ -79,6 +82,7 @@ public class HousePeer {
         simulator = new SmartMeterSimulator(new SlidingBuffer(this, 24, 0.5f));
         listener  = new PeerServer(this);
 
+
         simulator.start();
 
         new Thread(listener).start();
@@ -88,32 +92,30 @@ public class HousePeer {
 
     private void menu() {
         boolean isDeleted = false;
-
+        printMenu();
         while (!isDeleted){
             int choice=-1;
             do{
-
-                print("\n##########################################################");
-                print("Press -1- to require a boost");
-                print("Press -2- to show the coordinator");
-                print("Press -3- to show the house registered in the complex");
-                print("Press -0- to exit the Complex");
-                print("\n##########################################################");
                 choice= readInputInteger(fromShell, "input must be between 0 and 3");
 
-            }while(choice<0 || choice>3);
+            }while(choice<0 || choice>4);
 
             switch (choice){
                 case 0: isDeleted=deleteHouse();
                     break;
-                case 1:canBoost();
+                case 1:mexDispatcher.ricartAgrawala(getFullPeerListCopy());
                     break;
-                case 2: print("coordinator is: "+coordinator);
+                case 2: if (isCoordinator())
+                            print("I am the Coordinator!");
+                        else
+                            print("coordinator is: "+coordinator);
                     break;
                 case 3: Set<Integer> keys=peerList.keySet();
                         for(int x:keys){
                             print("House: "+x);
                         }
+                    break;
+                case 4:printMenu();
                     break;
                 default:
             }
@@ -121,7 +123,15 @@ public class HousePeer {
     }
 
 
-
+        public void printMenu(){
+            print("\n##########################################################");
+            print("Press -1- to require a boost");
+            print("Press -2- to show the coordinator");
+            print("Press -3- to show the house registered in the complex");
+            print("Press -4- to print this menu");
+            print("Press -0- to exit the Complex");
+            print("\n##########################################################");
+        }
 
     //region APPLICATION START
     private boolean registerToServer(){
@@ -138,14 +148,14 @@ public class HousePeer {
         Home[] h=resp.readEntity(Home[].class);
         resp.close();
 
-        if(h.length==0||(h.length==1 && h[0].HomeID==this.ID)){
-            coordinator=this.ID;
+        if(h.length==0||(h.length==1 && h[0].HomeID==this.HomeID)){
+            coordinator=this.HomeID;
         }
 
         addPeers(h);
 
         print("House registered in complex:"+h.length );
-        print("House "+ID+" registered SUCCESSFULLY!");
+        print("House "+ HomeID +" registered SUCCESSFULLY!");
 
         return true;
     }
@@ -176,7 +186,7 @@ public class HousePeer {
     //region APPLICATION END
 
     private boolean deleteHouse(int ...tries){
-        WebTarget wt = serverREST.path("/complex/delete").queryParam("id",ID);
+        WebTarget wt = serverREST.path("/complex/delete").queryParam("id", HomeID);
         Response resp=tryConnection(wt,false );
 
         if(resp==null) return false;
@@ -190,7 +200,7 @@ public class HousePeer {
         fromShell.close();
         simulator.stopMeGently();
         dropConnections();
-        print("House "+ID+" successfully deleted!");
+        print("House "+ HomeID +" successfully deleted!");
 
 
         return true;
@@ -215,7 +225,7 @@ public class HousePeer {
                 if(!chan.isShutdown())
                     chan.shutdown().awaitTermination(10, TimeUnit.SECONDS);
             } catch (InterruptedException e) {
-                printErr("interrupted while shutdown house "+ID);
+                printErr("interrupted while shutdown house "+ HomeID);
             }
         }
 
@@ -229,7 +239,7 @@ public class HousePeer {
         Response resp=null;
         try {
             if(registration)
-                resp = wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).post(Entity.entity(new Home(ID, host, port), MediaType.APPLICATION_JSON_TYPE));
+                resp = wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).post(Entity.entity(new Home(HomeID, host, port), MediaType.APPLICATION_JSON_TYPE));
             else//remotion
                 resp = wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).delete();
         }catch (ProcessingException p){
@@ -275,8 +285,11 @@ public class HousePeer {
     public MessageDispatcher getMexDispatcher() {
         return mexDispatcher;
     }
+    public SmartMeterSimulator getSimulator(){
+        return this.simulator;
+    }
     public synchronized boolean isCoordinator(){
-        return coordinator==this.ID;
+        return coordinator==this.HomeID;
     }
     public synchronized boolean isCoordinator(int id){
         if(coordinator==-1)return false;
@@ -295,7 +308,7 @@ public class HousePeer {
         List<ManagedChannel> tmp=new ArrayList<>();
         synchronized (peerList){
             for (Integer key : peerList.keySet()) {
-                if(key>this.ID)
+                if(key>this.HomeID)
                     tmp.add(peerList.get(key));
             }
         }

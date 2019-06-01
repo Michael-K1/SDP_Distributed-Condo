@@ -100,7 +100,7 @@ public class Administrator {
         print(  "Houses in Complex: "+comp.complex.size());
 
         for(Home h: comp.complex.values()){
-            print("ID:"+h.HomeID+"\n\t Host: "+h.address+"\n\t Port: "+h.listeningPort);
+            print("HomeID:"+h.HomeID+"\n\t Host: "+h.address+"\n\t Port: "+h.listeningPort);
         }
         response.close();
 
@@ -171,7 +171,7 @@ public class Administrator {
         if(isHouse) {
 
             do {
-                print("Insert the ID of the house:\n");
+                print("Insert the HomeID of the house:\n");
                 id = readInputInteger(fromShell,"input must be of positive digit");
             } while (id < 0);
         }
