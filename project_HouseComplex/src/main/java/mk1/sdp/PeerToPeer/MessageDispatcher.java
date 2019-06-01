@@ -6,6 +6,7 @@ import io.grpc.stub.StreamObserver;
 import mk1.sdp.GRPC.HouseManagementGrpc;
 import mk1.sdp.GRPC.PeerMessages.*;
 
+import mk1.sdp.PeerToPeer.Mutex.LamportClock;
 import mk1.sdp.misc.Pair;
 
 import javax.ws.rs.client.Entity;
@@ -27,6 +28,7 @@ public class MessageDispatcher {
     private final int port;
     private final WebTarget toLocalStat;
     private final WebTarget toGlobalStat;
+    private final LamportClock lampClock;
 
 
     public MessageDispatcher(HousePeer parent,WebTarget server){
@@ -35,6 +37,7 @@ public class MessageDispatcher {
             this.id=parent.ID;
             this.address=parent.host;
             this.port=parent.port;
+            this.lampClock=parent.lamportClock;
         }
 
         toLocalStat = server.path("/complex/house/add").queryParam("id", id);
@@ -56,6 +59,7 @@ public class MessageDispatcher {
         StreamObserver<Ack> respObs=new StreamObserver<Ack>() {
             @Override
             public void onNext(Ack ack) {
+               lampClock.checkLamport(ack);
 
             }
 
@@ -71,6 +75,7 @@ public class MessageDispatcher {
         };
 
         copy.stream().parallel().forEach(chan->HouseManagementGrpc.newStub(chan).withDeadlineAfter(5, TimeUnit.SECONDS).sendGlobalMean(globalMean,respObs));
+        lampClock.afterEvent();
     }
 
     public void sendToPeer(List<ManagedChannel> copy, Pair<Long, Double> measure) {
@@ -99,6 +104,8 @@ public class MessageDispatcher {
                     }
                     //printHigh("house "+id, respVal.toString()+ " x="+x);
                 }
+
+                lampClock.checkLamport(ack);
             }
 
             @Override
@@ -130,10 +137,16 @@ public class MessageDispatcher {
         copy.stream().parallel().forEach(chan-> HouseManagementGrpc.newStub(chan).sendMeasure(newMean, respObs));
 //        copy.stream().parallel().forEach(chan-> HouseManagementGrpc.newStub(chan).withDeadlineAfter(5, TimeUnit.SECONDS).sendMeasure(newMean, respObs));
 
-        parent.lamportClock.afterEvent();
+        lampClock.afterEvent();
 
     }
 
+    /**
+     *  REST request to server
+     * @param wt = target of the request (MUST HAVE THE CORRECT PATH)
+     * @param measure = measure to be sent to the server
+     * @return
+     */
     private boolean sendToServer(WebTarget wt, Pair<Long, Double> measure) {   //wt is already correct
 
         Response resp = wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).put(Entity.entity(measure, MediaType.APPLICATION_JSON_TYPE));
@@ -153,13 +166,14 @@ public class MessageDispatcher {
 
             @Override
             public void onNext(Ack ack) {
-                if(ack.getAck()){
-                    print(ack.getMessage());
-                    int coord=ack.getCoordinator();
-                    if(coord!=-1 && p.right!=coord){
-                        p.right=coord;
-                    }
+
+                print(ack.getMessage());
+                int coord=ack.getCoordinator();
+                if(coord!=-1 && p.right!=coord){
+                    p.right=coord;
                 }
+
+                lampClock.checkLamport(ack);
             }
 
             @Override
@@ -191,7 +205,7 @@ public class MessageDispatcher {
         copy.stream().parallel().forEach(chan -> HouseManagementGrpc.newStub(chan).addHome(selfIntro, respObs));
 //        copy.stream().parallel().forEach(chan -> HouseManagementGrpc.newStub(chan).withDeadlineAfter(5, TimeUnit.SECONDS).addHome(selfIntro, respObs));
 
-        parent.lamportClock.afterEvent();
+        lampClock.afterEvent();
     }
 
     public void removeSelfFromPeers(List<ManagedChannel> copy){
@@ -241,6 +255,7 @@ public class MessageDispatcher {
             @Override
             public void onNext(Ack ack) {
                 printHigh("house "+id, "asked to be coordinator to "+ack.getMessage());
+                lampClock.checkLamport(ack);
             }
 
             @Override
@@ -261,6 +276,7 @@ public class MessageDispatcher {
             }
         };
         copy.stream().parallel().forEach(chan->HouseManagementGrpc.newStub(chan).withDeadlineAfter(5, TimeUnit.SECONDS).election(coord, respObs));
+        lampClock.afterEvent();
     }
 
     private void becomeCoordinator() {
@@ -273,6 +289,7 @@ public class MessageDispatcher {
             @Override
             public void onNext(Ack ack) {
                 print(ack.getMessage());
+                lampClock.checkLamport(ack);
             }
 
             @Override
@@ -290,6 +307,13 @@ public class MessageDispatcher {
         };
 
         copy.stream().parallel().forEach(chan->HouseManagementGrpc.newStub(chan).newCoordinator(coord, respObs));
+        lampClock.afterEvent();
+    }
+
+    public void ricartAgrawala(List<ManagedChannel> copy){
+
     }
     //endregion
+
+
 }

@@ -15,14 +15,14 @@ import static mk1.sdp.misc.Common.*;
 public class HouseManagementService extends HouseManagementImplBase{
     private final HousePeer parent;
     private final int id;
-    private final LamportClock lamportClock;
+    private final LamportClock lampClock;
     private final Hashtable<Integer, LinkedList<Pair<Long,Double>>> complexMeans;
     private  Timer timer;
 
     public HouseManagementService(HousePeer parent){
         this.parent=parent;
         this.id=parent.ID;
-        lamportClock=parent.lamportClock;
+        lampClock =parent.lamportClock;
         complexMeans =new Hashtable<>();
     }
 
@@ -55,7 +55,6 @@ public class HouseManagementService extends HouseManagementImplBase{
 
         responseObserver.onNext(simpleAck(s));
         responseObserver.onCompleted();
-        lamportClock.afterEvent();
 
 //        if(parent.isCoordinator()){
 //            startScheduler();
@@ -101,8 +100,6 @@ public class HouseManagementService extends HouseManagementImplBase{
         if(parent.isCoordinator()){
             stopScheduler();
         }
-
-        lamportClock.afterEvent();
     }
 
     @Override
@@ -119,8 +116,6 @@ public class HouseManagementService extends HouseManagementImplBase{
         }
         responseObserver.onNext(simpleAck(""));
         responseObserver.onCompleted();
-
-
     }
 
     @Override
@@ -151,6 +146,8 @@ public class HouseManagementService extends HouseManagementImplBase{
         responseObserver.onNext(simpleAck("[REMOTE "+id+"] NEW COORDINATOR IS: "+coord));
         responseObserver.onCompleted();
 
+
+
         if(parent.isCoordinator()){
             startScheduler();
         }
@@ -158,10 +155,10 @@ public class HouseManagementService extends HouseManagementImplBase{
     //endregion
 
     private Ack simpleAck(String text){
+        lampClock.afterEvent();
         synchronized (parent) {
-            return Ack.newBuilder().setAck(true).setCoordinator(parent.getCoordinator()).setMessage(text).build();
+            return Ack.newBuilder().setAck(true).setCoordinator(parent.getCoordinator()).setMessage(text).setLamportTimestamp(lampClock.peekClock()).setSender(id).build();
         }
-
     }
 
     private void startScheduler(){
@@ -212,8 +209,8 @@ public class HouseManagementService extends HouseManagementImplBase{
             final double[] val = {0};
             pairs.forEach(p-> val[0] +=p.right);
 
-            pairs.forEach(p->printErr("single value "+p.right));
-            printHigh("coord "+id,"sum of the local means "+val[0]+" with n° Peer= "+pairs.size());
+//            pairs.forEach(p->printHigh("coord "+id,"single value "+p.right));
+//            printHigh("coord "+id,"sum of the local means "+val[0]+" with n° Peer= "+pairs.size());
 
             Pair<Long, Double> globalMean = Pair.of(System.currentTimeMillis(), val[0] / pairs.size());
             pairs.clear();

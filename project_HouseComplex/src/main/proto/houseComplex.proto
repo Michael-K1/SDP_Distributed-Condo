@@ -24,6 +24,8 @@ message Ack{
     bool ack=1;
     string message=2;
     int32 coordinator=3;
+    int32 lamportTimestamp=4;
+    int32 sender=5;
 }
 
 message SelfIntroduction{   //if the house comes later on needs to be added to the list of other houses

@@ -4,6 +4,8 @@ import io.grpc.Server;
 import io.grpc.ServerBuilder;
 
 import java.io.IOException;
+import java.net.BindException;
+
 import java.util.concurrent.TimeUnit;
 
 import static mk1.sdp.misc.Common.*;
@@ -21,7 +23,10 @@ public class PeerServer implements Runnable{
         this.port=parent.port;
         this.parent=parent;
         server= ServerBuilder.forPort(this.port).addService(new HouseManagementService(parent)).build();
+
     }
+
+
 
     @Override
     public void run() {
@@ -41,6 +46,9 @@ public class PeerServer implements Runnable{
 
                 }
             });
+        }catch(BindException e) {
+            printErr("port "+port+" already used. restart with new port between 49152 - 65535 ");
+
         } catch (IOException e) {
             printErr("while starting the server on port "+port+"...");
             e.printStackTrace();
