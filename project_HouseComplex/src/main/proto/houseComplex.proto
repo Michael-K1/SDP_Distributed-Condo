@@ -9,7 +9,6 @@ message Measure{
     int32 senderID=1;
     int64 timeStamp=2;
     double measurement=3;
-
 }
 
 message RequestBoost{
@@ -36,9 +35,12 @@ message SelfIntroduction{   //if the house comes later on needs to be added to t
 service HouseManagement{
     rpc AddHome(SelfIntroduction) returns(Ack){}
     rpc removeHome(SelfIntroduction) returns (Ack){}
+
     rpc sendMeasure(Measure) returns (Ack){}
     rpc sendGlobalMean(Measure) returns (Ack){}
+
     rpc election(Coordinator) returns(Ack){}
     rpc newCoordinator(Coordinator) returns (Ack){}
 
+    rpc boostRequest(RequestBoost)returns (Ack){}
 }

@@ -77,7 +77,7 @@ public class HousePeer {
 
         fromShell = new Scanner(System.in);
         simulator = new SmartMeterSimulator(new SlidingBuffer(this, 24, 0.5f));
-        listener=new PeerServer(this);
+        listener  = new PeerServer(this);
 
         simulator.start();
 
@@ -103,11 +103,10 @@ public class HousePeer {
 
             }while(choice<0 || choice>3);
 
-
             switch (choice){
                 case 0: isDeleted=deleteHouse();
                     break;
-                case 1:
+                case 1:canBoost();
                     break;
                 case 2: print("coordinator is: "+coordinator);
                     break;
@@ -120,6 +119,7 @@ public class HousePeer {
             }
         }
     }
+
 
 
 
@@ -138,46 +138,19 @@ public class HousePeer {
         Home[] h=resp.readEntity(Home[].class);
         resp.close();
 
-        print("House registered in complex:"+h.length );
         if(h.length==0||(h.length==1 && h[0].HomeID==this.ID)){
             coordinator=this.ID;
-
         }
-
 
         addPeers(h);
 
+        print("House registered in complex:"+h.length );
         print("House "+ID+" registered SUCCESSFULLY!");
 
         return true;
     }
 
-    private Response tryConnection(WebTarget wt,boolean registration, int ...retries){
-        Response resp=null;
-        try {
-            if(registration)
-                resp = wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).post(Entity.entity(new Home(ID, host, port), MediaType.APPLICATION_JSON_TYPE));
-            else//remotion
-                resp = wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).delete();
-        }catch (ProcessingException p){
-            if(retries.length==0){
-                Common.printErr("Connection refused by server.\tretrying...");
-                return tryConnection(wt,registration,1);
-            }
-            if (retries[0]<=5) {
-                Common.printErr("attempt "+retries[0]+". Connection refused by server.\tretrying...");
-                return tryConnection(wt,registration,retries[0]+1);
-            }
-            else {
-                Common.printErr("unable to connect to server.\n Closing program...");
-                return null;
-            }
-        }
-        return resp;
-    }
-
     private void addPeers(Home[] h) {
-
         for(Home x :h){
             ManagedChannel channel = ManagedChannelBuilder.forAddress(x.address, x.listeningPort).usePlaintext(true).build();
 
@@ -198,13 +171,13 @@ public class HousePeer {
         }
         return uri;
     }
-    //endregion
 
+    //endregion
     //region APPLICATION END
+
     private boolean deleteHouse(int ...tries){
         WebTarget wt = serverREST.path("/complex/delete").queryParam("id",ID);
         Response resp=tryConnection(wt,false );
-
 
         if(resp==null) return false;
 
@@ -222,7 +195,6 @@ public class HousePeer {
 
         return true;
     }
-
     private void dropConnections() {
         if(peerList.isEmpty()) {
             listener.stop();
@@ -250,26 +222,58 @@ public class HousePeer {
         listener.stop();
         client.close();
     }
+
     //endregion
+
+    private Response tryConnection(WebTarget wt,boolean registration, int ...retries){
+        Response resp=null;
+        try {
+            if(registration)
+                resp = wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).post(Entity.entity(new Home(ID, host, port), MediaType.APPLICATION_JSON_TYPE));
+            else//remotion
+                resp = wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).delete();
+        }catch (ProcessingException p){
+            if(retries.length==0){
+                Common.printErr("Connection refused by server.\tretrying...");
+                return tryConnection(wt,registration,1);
+            }
+            if (retries[0]<=5) {
+                Common.printErr("attempt "+retries[0]+". Connection refused by server.\tretrying...");
+                return tryConnection(wt,registration,retries[0]+1);
+            }
+            else {
+                Common.printErr("unable to connect to server.\n Closing program...");
+                return null;
+            }
+        }
+        return resp;
+    }
 
     public void broadcastLocalStat(Pair<Long,Double> measure){
         mexDispatcher.sendToPeer(getFullPeerListCopy(), measure);
     }
 
-
-
-    public int getCoordinator() {
-        return coordinator;
+    private void canBoost() {
+        try {
+            simulator.boost();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
-    public MessageDispatcher getMexDispatcher() {
-        return mexDispatcher;
+    //region GETTER/SETTER
+    public int getCoordinator() {
+        return coordinator;
     }
 
     public synchronized void setCoordinator(int coord) {
         if(this.coordinator==coord)return;
 
         this.coordinator = coord;
+    }
+
+    public MessageDispatcher getMexDispatcher() {
+        return mexDispatcher;
     }
     public synchronized boolean isCoordinator(){
         return coordinator==this.ID;
@@ -297,4 +301,5 @@ public class HousePeer {
         }
         return tmp;
     }
+    //endregion
 }

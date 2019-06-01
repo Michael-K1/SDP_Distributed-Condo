@@ -8,12 +8,9 @@ import mk1.sdp.GRPC.PeerMessages.*;
 import mk1.sdp.PeerToPeer.Mutex.LamportClock;
 import mk1.sdp.misc.Pair;
 
-import java.sql.Timestamp;
 import java.util.*;
 
-
 import static mk1.sdp.misc.Common.*;
-
 
 public class HouseManagementService extends HouseManagementImplBase{
     private final HousePeer parent;
@@ -27,10 +24,8 @@ public class HouseManagementService extends HouseManagementImplBase{
         this.id=parent.ID;
         lamportClock=parent.lamportClock;
         complexMeans =new Hashtable<>();
-
-
-
     }
+
     //region RPCs
 
     @Override
@@ -62,9 +57,10 @@ public class HouseManagementService extends HouseManagementImplBase{
         responseObserver.onCompleted();
         lamportClock.afterEvent();
 
-        if(parent.isCoordinator()){
-            startScheduler();
-        }
+//        if(parent.isCoordinator()){
+//            startScheduler();
+//        }
+        startScheduler();
     }
 
     @Override
@@ -102,7 +98,7 @@ public class HouseManagementService extends HouseManagementImplBase{
         responseObserver.onNext(simpleAck(s));
         responseObserver.onCompleted();
 
-        if(parent.isCoordinator(sender)){
+        if(parent.isCoordinator()){
             stopScheduler();
         }
 
@@ -113,11 +109,7 @@ public class HouseManagementService extends HouseManagementImplBase{
     public void sendMeasure(Measure request, StreamObserver<Ack> responseObserver) {
         int sender=request.getSenderID();
         Pair<Long, Double> mean = Pair.of(request.getTimeStamp(), request.getMeasurement());
-        int complexSize;
 
-        synchronized (parent.peerList){
-            complexSize=parent.peerList.size();
-        }
         //printMeasure("HOUSE "+sender+" sends",mean);
         synchronized (complexMeans){
             if(!complexMeans.containsKey(sender)){
@@ -139,10 +131,15 @@ public class HouseManagementService extends HouseManagementImplBase{
 
         responseObserver.onNext(simpleAck(""));
         responseObserver.onCompleted();
+
     }
 
     @Override
     public void election(Coordinator request, StreamObserver<Ack> responseObserver) {
+        testTimeWaster();
+        responseObserver.onNext(simpleAck("[REMOTE "+id+"]"));
+        responseObserver.onCompleted();
+
 
     }
 
@@ -150,7 +147,8 @@ public class HouseManagementService extends HouseManagementImplBase{
     public void newCoordinator(Coordinator request, StreamObserver<Ack> responseObserver) {
         int coord=request.getCoordinatorID();
         parent.setCoordinator(coord);
-        responseObserver.onNext(simpleAck("[REMOTE "+id+"]new Coordinator is "+coord));
+        testTimeWaster();
+        responseObserver.onNext(simpleAck("[REMOTE "+id+"] NEW COORDINATOR IS: "+coord));
         responseObserver.onCompleted();
 
         if(parent.isCoordinator()){
@@ -183,7 +181,7 @@ public class HouseManagementService extends HouseManagementImplBase{
      */
     private void testTimeWaster(){
         try {
-            Thread.sleep(4*1000);
+            Thread.sleep(6*1000);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -191,33 +189,35 @@ public class HouseManagementService extends HouseManagementImplBase{
     }
 
     private class MeanCalculationTask extends TimerTask{
-        MessageDispatcher mex=parent.getMexDispatcher();
+        private MessageDispatcher mex=parent.getMexDispatcher();
+        private List<Pair<Long,Double>> pairs=new ArrayList<>();
+
         @Override
         public void run() {
-            int count=0;
-            List<Pair<Long,Double>> pairs=new ArrayList<>();
             synchronized (HouseManagementService.this.complexMeans){
                 for(LinkedList<Pair<Long,Double>> x:complexMeans.values()){ //foreach list removes the first element in the queue
                     if(!x.isEmpty()){
-                        pairs.add(x.removeFirst());
-                        count+=1;
+                        pairs.add(x.removeFirst());         //every peer will remove the first element in the queue
                     }
                 }
             }
-//            print("\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tPRIMA "+count);
-            if (count==0) {
+
+            if (pairs.size()==0 ||!parent.isCoordinator()) {
 //                print("no mean yet");
 //                print(new Timestamp(System.currentTimeMillis()).toString());
+                pairs.clear();
                 return;
             }
 
             final double[] val = {0};
             pairs.forEach(p-> val[0] +=p.right);
 
-            Pair<Long, Double> globalMean = Pair.of(System.currentTimeMillis(), val[0] / count);
-//            print("\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tDOPO "+val[0]+" -> "+count);
-            mex.sendGlobalStatistics(globalMean);
+            pairs.forEach(p->printErr("single value "+p.right));
+            printHigh("coord "+id,"sum of the local means "+val[0]+" with n° Peer= "+pairs.size());
 
+            Pair<Long, Double> globalMean = Pair.of(System.currentTimeMillis(), val[0] / pairs.size());
+            pairs.clear();
+            mex.sendGlobalStatistics(globalMean);
         }
     }
 }

@@ -15,7 +15,7 @@ import javax.ws.rs.core.Response;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-//import java.util.concurrent.TimeUnit;
+
 
 
 import static mk1.sdp.misc.Common.*;
@@ -105,7 +105,7 @@ public class MessageDispatcher {
             public void onError(Throwable throwable) {
                 if(throwable.getMessage().toUpperCase().matches("(.*)DEADLINE_EXCEEDED(.*)")){
                     printErr("deadline problem detected");
-                    //todo start election
+
                 }
             }
 
@@ -118,7 +118,7 @@ public class MessageDispatcher {
                         if(!respVal.right){
                             //todo indire elezione
                             printErr("election needed");
-
+                            startElection();
 
                         }
 
@@ -127,7 +127,8 @@ public class MessageDispatcher {
         };
 
 
-        copy.stream().parallel().forEach(chan-> HouseManagementGrpc.newStub(chan).withDeadlineAfter(5, TimeUnit.SECONDS).sendMeasure(newMean, respObs));
+        copy.stream().parallel().forEach(chan-> HouseManagementGrpc.newStub(chan).sendMeasure(newMean, respObs));
+//        copy.stream().parallel().forEach(chan-> HouseManagementGrpc.newStub(chan).withDeadlineAfter(5, TimeUnit.SECONDS).sendMeasure(newMean, respObs));
 
         parent.lamportClock.afterEvent();
 
@@ -145,10 +146,6 @@ public class MessageDispatcher {
 
     public void addSelfToPeers(List<ManagedChannel> copy){
         SelfIntroduction selfIntro = SelfIntroduction.newBuilder().setId(id).setAddress(address).setPort(port).build();
-
-
-
-
 
         final  Pair<Integer, Integer> p = Pair.of(0,-1);
 
@@ -170,7 +167,7 @@ public class MessageDispatcher {
                 printErr("Async self introduction "+ throwable.getMessage());
                 //throwable.getCause().printStackTrace();
                 if(throwable.getMessage().toUpperCase().matches("(.*)DEADLINE_EXCEEDED(.*)")){
-                    printErr("deadline problem detected");
+                    printErr("deadline problem detected during self introduction");
                 }
             }
 
@@ -191,9 +188,8 @@ public class MessageDispatcher {
             }
         };
 
-
-        copy.stream().parallel().forEach(chan -> HouseManagementGrpc.newStub(chan).withDeadlineAfter(5, TimeUnit.SECONDS).addHome(selfIntro, respObs));
-
+        copy.stream().parallel().forEach(chan -> HouseManagementGrpc.newStub(chan).addHome(selfIntro, respObs));
+//        copy.stream().parallel().forEach(chan -> HouseManagementGrpc.newStub(chan).withDeadlineAfter(5, TimeUnit.SECONDS).addHome(selfIntro, respObs));
 
         parent.lamportClock.afterEvent();
     }
@@ -214,7 +210,7 @@ public class MessageDispatcher {
                 printErr("Async self deletion "+ throwable.getMessage());
                // throwable.printStackTrace();
                 if(throwable.getMessage().toUpperCase().matches("(.*)DEADLINE_EXCEEDED(.*)")){
-                    printErr("deadline problem detected");
+                    printErr("deadline problem detected while removing self");
                 }
 
             }
@@ -229,35 +225,42 @@ public class MessageDispatcher {
             }
         };
 
-        copy.stream().parallel().forEach(chan->HouseManagementGrpc.newStub(chan).withDeadlineAfter(5, TimeUnit.SECONDS).removeHome(selfIntro, respObs));
+        copy.stream().parallel().forEach(chan->HouseManagementGrpc.newStub(chan).removeHome(selfIntro, respObs));
+//        copy.stream().parallel().forEach(chan->HouseManagementGrpc.newStub(chan).withDeadlineAfter(5, TimeUnit.SECONDS).removeHome(selfIntro, respObs));
     }
 
     public void startElection(){
         List<ManagedChannel> copy = parent.getGTPeerListCopy();
         if(copy.size()==0){
-
+            becomeCoordinator();//I am new coordinator
+            return;
         }
+        Coordinator coord= Coordinator.newBuilder().setCoordinatorID(id).build();
 
         StreamObserver<Ack> respObs=new StreamObserver<Ack>() {
             @Override
             public void onNext(Ack ack) {
-
+                printHigh("house "+id, "asked to be coordinator to "+ack.getMessage());
             }
 
             @Override
             public void onError(Throwable throwable) {
-                if(throwable.getMessage().toUpperCase().matches("(.*)DEADLINE_EXCEEDED(.*)")){
-                    printErr("deadline problem detected");
-                    becomeCoordinator();//I am new coordinator
+                if(throwable.getMessage().toUpperCase().matches("(.*)DEADLINE_EXCEEDED(.*)")){          //only happens when a message is sent to the previous coordinator, if it hasn't reappeared yet
+                    printErr("deadline problem detected: previous coordinator unreachable");
+                    synchronized (parent){
+                        if(parent.getCoordinator()==-1) //if the coordinator hasn't been chosen yet
+                            startElection();
+                    }
                 }
             }
 
             @Override
             public void onCompleted() {
+                printHigh("house "+id, "answer received.\n\tanother coordinator is being selected");
 
             }
         };
-        copy.stream().parallel().forEach(chan->HouseManagementGrpc.newStub(chan).withDeadlineAfter(5, TimeUnit.SECONDS).election(null, respObs));
+        copy.stream().parallel().forEach(chan->HouseManagementGrpc.newStub(chan).withDeadlineAfter(5, TimeUnit.SECONDS).election(coord, respObs));
     }
 
     private void becomeCoordinator() {

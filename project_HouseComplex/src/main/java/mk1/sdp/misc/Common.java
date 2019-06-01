@@ -11,7 +11,7 @@ import java.util.Scanner;
 
 public class Common {
     private static Timestamp time =new Timestamp(System.currentTimeMillis());
-    private static SimpleDateFormat formatter=new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
+    private static SimpleDateFormat formatter=new SimpleDateFormat("dd/MM/yyyy hh:mm:ss a");
 
     public static void printErr(String s){ System.err.println("[ERROR]: "+s.toUpperCase()+"...");}
     public static void printHigh(String who,String s){ System.out.println("["+who.toUpperCase()+"]: "+s.toUpperCase());}
