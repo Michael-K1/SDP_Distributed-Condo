@@ -3,8 +3,6 @@ package mk1.sdp.PeerToPeer.Mutex;
 import mk1.sdp.GRPC.PeerMessages;
 import mk1.sdp.misc.Pair;
 
-import static mk1.sdp.misc.Common.printHigh;
-
 public class LamportClock {
     private int deltaTime=1;
     private int id;

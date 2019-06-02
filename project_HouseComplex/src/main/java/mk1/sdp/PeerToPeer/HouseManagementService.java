@@ -133,7 +133,7 @@ public class HouseManagementService extends HouseManagementImplBase{
 
     @Override
     public void election(Coordinator request, StreamObserver<Ack> responseObserver) {
-        testTimeWaster(6);
+        //testTimeWaster(6);
         responseObserver.onNext(simpleAck(true,""));
         responseObserver.onCompleted();
 
@@ -144,7 +144,7 @@ public class HouseManagementService extends HouseManagementImplBase{
     public void newCoordinator(Coordinator request, StreamObserver<Ack> responseObserver) {
         int coord=request.getCoordinatorID();
         parent.setCoordinator(coord);
-        testTimeWaster(6);
+        //testTimeWaster(6);
         responseObserver.onNext(simpleAck(true,"NEW COORDINATOR IS: "+coord));
         responseObserver.onCompleted();
 
@@ -160,7 +160,8 @@ public class HouseManagementService extends HouseManagementImplBase{
         int sender=request.getRequester();
         Pair<Integer, Integer> otherClock = Pair.of(sender, request.getLamportTimestamp());
 
-        printHigh("house "+homeID, sender+" requested to boost");
+        if(homeID!=sender)
+            printHigh("house "+homeID, sender+" requested to boost");
 
         if(mexDispatcher.isInBoost()){
             mexDispatcher.enqueue(sender);
@@ -170,15 +171,15 @@ public class HouseManagementService extends HouseManagementImplBase{
         }else if(askingBoost && !mexDispatcher.isInBoost()){//if I'm asking boost but have not started yet
             if(lampClock.before(otherClock)){//if "this" has a lower clock
                 mexDispatcher.enqueue(sender);
-                printRED("i'm already waiting for boost permission. "+sender+" enqueued!");
-                responseObserver.onNext(simpleAck(false, "ALREADY WAITING FOR BOOST"));
+                printRED("[HOUSE "+homeID+"] waiting for boost permission. "+sender+" enqueued!");
+                responseObserver.onNext(simpleAck(false, "ALREADY IN QUEUE FOR BOOST PERMISSION. WAIT YOUR TURN "));
             }else {
                 responseObserver.onNext(simpleAck(true,"PERMISSION TO BOOST GRANTED"));
             }
         }else{
             if(sender==this.homeID){
                 setAskingBoost(true);
-                testTimeWaster(10);
+                //testTimeWaster(10);
             }
             responseObserver.onNext(simpleAck(true,"PERMISSION TO BOOST GRANTED"));
         }
@@ -190,10 +191,10 @@ public class HouseManagementService extends HouseManagementImplBase{
     public void boostResponse(ResponseBoost request, StreamObserver<Ack> responseObserver) {
         int sender=request.getSender();
 
-        if(sender==this.homeID){
-            setAskingBoost(false);
-            testTimeWaster(10);
-        }
+
+        setAskingBoost(false);
+        //testTimeWaster(10);
+
 
         if (request.getBoostPermission()){
             printHigh("remote "+sender, "PERMISSION TO BOOST GRANTED");
@@ -226,18 +227,7 @@ public class HouseManagementService extends HouseManagementImplBase{
 
 
 
-    /**
-     * method that wastes some time(less than deadline)
-     */
-    private void testTimeWaster(int sec){
-        try {
-            Thread.sleep(sec*1000);
-            printRED("TEST: waiting finished");
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
 
-    }
 
     public synchronized void setAskingBoost(boolean askingBoost) {
         this.askingBoost = askingBoost;

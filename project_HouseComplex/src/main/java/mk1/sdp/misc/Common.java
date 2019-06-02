@@ -60,4 +60,19 @@ public class Common {
         return val;
     }
 
+    /**
+     * method that wastes some time(less than deadline)
+     * @param sec =seconds to be wasted
+     */
+    public static void testTimeWaster(int sec){
+
+        try {
+            printRED("TEST: waiting for "+sec+" sec: started");
+            Thread.sleep(sec*1000);
+            printRED("TEST: waiting for "+sec+" sec: finished");
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+    }
 }

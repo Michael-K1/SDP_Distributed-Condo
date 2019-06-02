@@ -2,6 +2,8 @@ package mk1.sdp.PeerToPeer;
 
 import io.grpc.ManagedChannel;
 
+import io.grpc.Status;
+import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 import mk1.sdp.GRPC.HouseManagementGrpc;
 import mk1.sdp.GRPC.PeerMessages.*;
@@ -74,9 +76,11 @@ public class MessageDispatcher {
 
             @Override
             public void onError(Throwable throwable) {
-                printErr("Async self introduction "+ throwable.getMessage());
+                StatusRuntimeException t=(StatusRuntimeException)throwable;
+                if(t.getStatus().isOk()) return;
+                printErr("Async self introduction "+ t.getMessage()+ " status= "+t.getStatus());
                 //throwable.getCause().printStackTrace();
-                if(throwable.getMessage().toUpperCase().matches("(.*)DEADLINE_EXCEEDED(.*)")){
+                if(t.getStatus().getCode()== Status.Code.DEADLINE_EXCEEDED){
                     printErr("deadline problem detected during self introduction");
                 }
             }
@@ -121,9 +125,11 @@ public class MessageDispatcher {
 
             @Override
             public void onError(Throwable throwable) {
-                printErr("Async self deletion "+ throwable.getMessage());
+                StatusRuntimeException t=(StatusRuntimeException)throwable;
+                if(t.getStatus().isOk()) return;
+                printErr("Async self deletion "+ t.getMessage()+" status "+t.getStatus());
                 // throwable.printStackTrace();
-                if(throwable.getMessage().toUpperCase().matches("(.*)DEADLINE_EXCEEDED(.*)")){
+                if(t.getMessage().toUpperCase().matches("(.*)DEADLINE_EXCEEDED(.*)")){
                     printErr("deadline problem detected while removing self");
                 }
 
@@ -138,6 +144,9 @@ public class MessageDispatcher {
 
             }
         };
+
+        if(!boostQueue.isEmpty())
+            notifyQueue();
 
         copy.stream().parallel().forEach(chan->HouseManagementGrpc.newStub(chan).removeHome(selfIntro, respObs));
 //        copy.stream().parallel().forEach(chan->HouseManagementGrpc.newStub(chan).withDeadlineAfter(5, TimeUnit.SECONDS).removeHome(selfIntro, respObs));
@@ -163,8 +172,10 @@ public class MessageDispatcher {
 
             @Override
             public void onError(Throwable throwable) {
-                printErr(" during global mean deliverance");
-                throwable.printStackTrace();
+                StatusRuntimeException t=(StatusRuntimeException)throwable;
+                if(t.getStatus().isOk()) return;
+                printErr(" during global mean deliverance "+t.getStatus());
+
             }
 
             @Override
@@ -208,9 +219,11 @@ public class MessageDispatcher {
 
             @Override
             public void onError(Throwable throwable) {
-                printErr("during peer broadcast");
-                throwable.printStackTrace();
-                if(throwable.getMessage().toUpperCase().matches("(.*)DEADLINE_EXCEEDED(.*)")){
+                StatusRuntimeException t=(StatusRuntimeException)throwable;
+                if(t.getStatus().isOk()) return;
+                printErr("during peer broadcast "+t.getStatus());
+
+                if(t.getMessage().toUpperCase().matches("(.*)DEADLINE_EXCEEDED(.*)")){
                     printErr("deadline problem detected");
                 }
             }
@@ -273,9 +286,12 @@ public class MessageDispatcher {
 
             @Override
             public void onError(Throwable throwable) {
-                printErr("during start election");
-                throwable.printStackTrace();
-                if(throwable.getMessage().toUpperCase().matches("(.*)DEADLINE_EXCEEDED(.*)")){          //only happens when a message is sent to the previous coordinator, if it hasn't reappeared yet
+                StatusRuntimeException t=(StatusRuntimeException)throwable;
+                if(t.getStatus().isOk()) return;
+                printErr("during start election " +t.getStatus());
+                //t.printStackTrace();
+
+                if(t.getStatus().equals(Status.DEADLINE_EXCEEDED)){ //only happens when a message is sent to the previous coordinator, if it hasn't reappeared yet
                     printErr("deadline problem detected: previous coordinator unreachable");
                     synchronized (parent){
                         if(parent.getCoordinator()==-1) //if the coordinator hasn't been chosen yet
@@ -309,7 +325,9 @@ public class MessageDispatcher {
 
             @Override
             public void onError(Throwable throwable) {
-
+                StatusRuntimeException t=(StatusRuntimeException)throwable;
+                if(t.getStatus().isOk()) return;
+                printErr("during \"become coordinator\" "+t.getStatus());
             }
 
             @Override
@@ -353,8 +371,10 @@ public class MessageDispatcher {
 
             @Override
             public void onError(Throwable throwable) {
-                printErr("error in ricart-Agrawala "+throwable.getMessage());
-                throwable.printStackTrace();
+                StatusRuntimeException t=(StatusRuntimeException)throwable;
+                if(t.getStatus().isOk()) return;
+                printErr("error in ricart-Agrawala "+t.getMessage()+ " status "+t.getStatus());
+
             }
 
             @Override
@@ -399,15 +419,15 @@ public class MessageDispatcher {
 
     private void boost(){
 
-        usingBoost=true;
         Runnable runner = new Runnable() {
             @Override
             public void run() {
                 try {
+                    usingBoost=true;
                     printHigh("house "+id,"starting boost");
                     parent.getSimulator().boost();
 
-                    //Thread.sleep(10*1000);        //todo for test
+                    testTimeWaster(10);       //todo for test
                 } catch (InterruptedException e) {
                     printErr("interrupted while boosting");
                 }finally {
@@ -442,8 +462,9 @@ public class MessageDispatcher {
 
             @Override
             public void onError(Throwable throwable) {
-                printErr("during notification of boost queue");
-                throwable.printStackTrace();
+                StatusRuntimeException t=(StatusRuntimeException)throwable;
+                if(t.getStatus().isOk()) return;
+                printErr("during notification of boost queue "+ t.getStatus());
             }
 
             @Override
@@ -451,7 +472,6 @@ public class MessageDispatcher {
 
             }
         };
-
         ResponseBoost resp= ResponseBoost.newBuilder().setSender(id).setBoostPermission(true).build();
 
         copyPeer.stream().parallel().forEach(chan->HouseManagementGrpc.newStub(chan).boostResponse(resp, respObs));
