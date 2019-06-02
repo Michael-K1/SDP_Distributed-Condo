@@ -210,14 +210,14 @@ public class Administrator {
     private int printMenu(){
         int val=-1;
         do {
-            print("\n##########################################################");
-            print("Press -1- to obtain the list of the houses in the complex");
-            print("Press -2- to obtain the list of the last statistics of a House");
-            print("Press -3- to obtain the list of the last statistics of the complex");
-            print("Press -4- to obtain the Mean and Standard Deviation of the last N statistics of a house");
-            print("Press -5- to obtain the Mean and Standard Deviation of the last N statistics of  the complex");
-            print("Press -0- to close the administrator client");
-            print("##########################################################\n");
+            print("##########################################################\n"+
+                    "Press -1- to obtain the list of the houses in the complex\n"+
+                    "Press -2- to obtain the list of the last statistics of a House\n"+
+                    "Press -3- to obtain the list of the last statistics of the complex\n"+
+                    "Press -4- to obtain the Mean and Standard Deviation of the last N statistics of a house\n"+
+                    "Press -5- to obtain the Mean and Standard Deviation of the last N statistics of  the complex\n"+
+                    "Press -0- to close the administrator client\n"+
+                    "##########################################################\n");
             val= readInputInteger(fromShell,"input must be between 0 and 5");
 
         }while(val<0||val>5);

@@ -13,7 +13,10 @@ public class Common {
     private static Timestamp time =new Timestamp(System.currentTimeMillis());
     private static SimpleDateFormat formatter=new SimpleDateFormat("dd/MM/yyyy hh:mm:ss a");
 
-    public static void printErr(String s){ System.err.println("[ERROR]: "+s.toUpperCase()+"...");}
+    public static void printErr(String s){ printRED("[ERROR]: "+s+"...");}
+    public static void printRED(String s){
+        System.err.println(s.toUpperCase());
+    }
     public static void printHigh(String who,String s){ System.out.println("["+who.toUpperCase()+"]: "+s.toUpperCase());}
     public static void print(String s){ System.out.println(s);}
     public static void printMeasure(String s,Pair<Long,Double> m){
@@ -34,7 +37,7 @@ public class Common {
         return false;
     }
 
-    public static int readInputInteger(Scanner fromShell, String inputMismatch) {
+    public static int readInputInteger(@NotNull Scanner fromShell, String inputMismatch) {
         int val=-1;
 
         try {

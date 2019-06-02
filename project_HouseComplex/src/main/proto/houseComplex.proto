@@ -17,7 +17,7 @@ message RequestBoost{
 }
 message ResponseBoost{
     int32 sender=1;
-    bool canBoost=2;
+    bool boostPermission=2;
 
 }
 message Coordinator{

@@ -26,7 +26,7 @@ public class LamportClock {
         clock=newClock;
     }
 
-    private boolean before(Pair<Integer,Integer> otherIDClock){   //left=id right=clock
+    public boolean before(Pair<Integer,Integer> otherIDClock){   //left=id right=clock
         if(clock>otherIDClock.right)
             return false;
         else if(clock<otherIDClock.right){
@@ -46,7 +46,7 @@ public class LamportClock {
         if(this.before(otherClock)){
             this.updateClock(ack.getLamportTimestamp()+1);
         }
-        printHigh("house "+id,"Lamport clock: "+this.peekClock());
+        //printHigh("house "+id,"Lamport clock: "+this.peekClock());
     }
 
     @Override

@@ -41,7 +41,7 @@ public class PeerServer implements Runnable{
             Runtime.getRuntime().addShutdownHook(new Thread(){
                 @Override
                 public void run(){
-                    System.err.println("[HOUSE "+ id +"]shutting down gRPC server since JVM is shutting down...".toUpperCase());
+                    printRED("[HOUSE "+ id +"] shutting down gRPC server since JVM is shutting down...");
                     PeerServer.this.stop();
 
                 }

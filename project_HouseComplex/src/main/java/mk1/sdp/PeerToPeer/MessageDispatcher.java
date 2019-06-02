@@ -116,6 +116,7 @@ public class MessageDispatcher {
             public void onNext(Ack ack) {
                 if(ack.getAck())
                     print(ack.getMessage());
+                lampClock.checkLamport(ack);
             }
 
             @Override
@@ -162,7 +163,8 @@ public class MessageDispatcher {
 
             @Override
             public void onError(Throwable throwable) {
-
+                printErr(" during global mean deliverance");
+                throwable.printStackTrace();
             }
 
             @Override
@@ -194,22 +196,22 @@ public class MessageDispatcher {
         StreamObserver<Ack> respObs=new StreamObserver<Ack>() {
             @Override
             public void onNext(Ack ack) {
+                lampClock.checkLamport(ack);
+
                 synchronized (respVal){
                     int x=ack.getCoordinator();
                     if (parent.isCoordinator(x) && !respVal.right){
                         respVal.right=true;                          //the coordinator has answered
                     }
-                    //printHigh("house "+id, respVal.toString()+ " x="+x);
                 }
-
-                lampClock.checkLamport(ack);
             }
 
             @Override
             public void onError(Throwable throwable) {
+                printErr("during peer broadcast");
+                throwable.printStackTrace();
                 if(throwable.getMessage().toUpperCase().matches("(.*)DEADLINE_EXCEEDED(.*)")){
                     printErr("deadline problem detected");
-
                 }
             }
 
@@ -271,6 +273,8 @@ public class MessageDispatcher {
 
             @Override
             public void onError(Throwable throwable) {
+                printErr("during start election");
+                throwable.printStackTrace();
                 if(throwable.getMessage().toUpperCase().matches("(.*)DEADLINE_EXCEEDED(.*)")){          //only happens when a message is sent to the previous coordinator, if it hasn't reappeared yet
                     printErr("deadline problem detected: previous coordinator unreachable");
                     synchronized (parent){
@@ -335,17 +339,16 @@ public class MessageDispatcher {
         StreamObserver<Ack> respObs= new StreamObserver<Ack>() {
             @Override
             public void onNext(Ack ack) {
+                lampClock.checkLamport(ack);
+
                 synchronized (responses){
-                    responses.left=responses.left+1;
                     if(!ack.getAck()){
-                       responses.right=responses.right+1;
-                       printErr(ack.getMessage());
+                        responses.right=responses.right+1;
+                        printRED(ack.getMessage());
                     }else {
-                       print(ack.getMessage());
+                        print(ack.getMessage());
                     }
                 }
-
-                lampClock.checkLamport(ack);
             }
 
             @Override
@@ -356,16 +359,18 @@ public class MessageDispatcher {
 
             @Override
             public void onCompleted() {
-                synchronized (responses){
-                    printHigh("house "+id,"answers received"+responses.left+"/"+copy.size());
-                    if(responses.left==copy.size()){
+                synchronized (responses) {
+                    responses.left = responses.left + 1;
+                    printHigh("house " + id, "answers received " + responses.left + "/" + copy.size());
+                }
 
-                        if (responses.right<2){//if no more than 1 person is boosting
-                            if(!usingBoost)
-                                boost();
-                        }else{
-                            printErr("Other houses are boosting right now.\twait your turn");
-                        }
+                if(responses.left==copy.size()){
+
+                    if (responses.right<2){//if no more than 1 person is boosting
+                        if(!usingBoost)
+                            boost();
+                    }else{
+                        printErr("Other houses are boosting right now.\twait your turn");
                     }
 
                 }
@@ -391,29 +396,66 @@ public class MessageDispatcher {
         }
 
     }
-    private synchronized void boost(){
 
-            usingBoost=true;
-            Runnable runner = new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        printHigh("house "+id,"starting boost");
-                        parent.getSimulator().boost();
-                    } catch (InterruptedException e) {
-                        printErr("interrupted while boosting");
-                    }finally {
-                        usingBoost=false;
-                        printHigh("house "+id,"boost completed!");
-                    }
+    private void boost(){
+
+        usingBoost=true;
+        Runnable runner = new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    printHigh("house "+id,"starting boost");
+                    parent.getSimulator().boost();
+
+                    //Thread.sleep(10*1000);        //todo for test
+                } catch (InterruptedException e) {
+                    printErr("interrupted while boosting");
+                }finally {
+                    usingBoost=false;
+                    printHigh("house "+id,"boost completed!");
+                    notifyQueue();
                 }
-            };
-             new Thread(runner).start();
+            }
+        };
 
-
-
+        new Thread(runner).start();
     }
+
+    private void notifyQueue() {
+        List<Integer> copyQueue;
+        synchronized (boostQueue){
+            if(boostQueue.isEmpty()) return;
+
+            copyQueue=new LinkedList<>(boostQueue);
+            boostQueue.clear();
+        }
+        List<ManagedChannel> copyPeer=parent.getSetPeerList(copyQueue);
+        if(copyPeer.isEmpty()) return;
+
+        StreamObserver<Ack> respObs= new StreamObserver<Ack>() {
+            @Override
+            public void onNext(Ack ack) {
+                print(ack.getMessage());
+                lampClock.checkLamport(ack);
+
+            }
+
+            @Override
+            public void onError(Throwable throwable) {
+                printErr("during notification of boost queue");
+                throwable.printStackTrace();
+            }
+
+            @Override
+            public void onCompleted() {
+
+            }
+        };
+
+        ResponseBoost resp= ResponseBoost.newBuilder().setSender(id).setBoostPermission(true).build();
+
+        copyPeer.stream().parallel().forEach(chan->HouseManagementGrpc.newStub(chan).boostResponse(resp, respObs));
+    }
+
     //endregion
-
-
 }

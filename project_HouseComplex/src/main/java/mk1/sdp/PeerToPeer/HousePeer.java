@@ -1,6 +1,5 @@
 package mk1.sdp.PeerToPeer;
 
-import simulation_src_2019.Simulator;
 import simulation_src_2019.SmartMeterSimulator;
 
 import io.grpc.ManagedChannel;
@@ -123,15 +122,15 @@ public class HousePeer {
     }
 
 
-        public void printMenu(){
-            print("\n##########################################################");
-            print("Press -1- to require a boost");
-            print("Press -2- to show the coordinator");
-            print("Press -3- to show the house registered in the complex");
-            print("Press -4- to print this menu");
-            print("Press -0- to exit the Complex");
-            print("\n##########################################################");
-        }
+    private void printMenu(){
+        print("\n##########################################################\n"+
+                "Press -1- to require a boost\n"+
+                "Press -2- to show the coordinator\n"+
+                "Press -3- to show the house registered in the complex\n"+
+                "Press -4- to print this menu\n"+
+                "Press -0- to exit the Complex\n"+
+                "##########################################################\n");
+    }
 
     //region APPLICATION START
     private boolean registerToServer(){
@@ -313,6 +312,18 @@ public class HousePeer {
             }
         }
         return tmp;
+    }
+
+    public List<ManagedChannel> getSetPeerList(List<Integer> queue){
+        List<ManagedChannel> copy=new ArrayList<>(queue.size());
+        synchronized (peerList){
+            for (Integer key : queue) {
+                if(peerList.containsKey(key))
+                    copy.add(peerList.get(key));
+            }
+        }
+
+        return copy;
     }
     //endregion
 }
