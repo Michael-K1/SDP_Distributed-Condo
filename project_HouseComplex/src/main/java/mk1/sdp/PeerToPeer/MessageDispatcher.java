@@ -244,31 +244,26 @@ public class MessageDispatcher {
                 }
             }
         };
-
-
         copy.stream().parallel().forEach(chan-> HouseManagementGrpc.newStub(chan).sendMeasure(newMean, respObs));
 //        copy.stream().parallel().forEach(chan-> HouseManagementGrpc.newStub(chan).withDeadlineAfter(5, TimeUnit.SECONDS).sendMeasure(newMean, respObs));
 
         lampClock.afterEvent();
-
     }
 
     /**
-     *  REST request to server
+     * REST request to server
      * @param wt = target of the request (MUST HAVE THE CORRECT PATH)
      * @param measure = measure to be sent to the server
      * @return
      */
-    private boolean sendToServer(WebTarget wt, Pair<Long, Double> measure) {   //wt is already correct
-
+    private boolean sendToServer(WebTarget wt, Pair<Long, Double> measure) {
         Response resp = wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).put(Entity.entity(measure, MediaType.APPLICATION_JSON_TYPE));
 
         if(resp==null) return true;
-
         return responseHasError(resp);
-
     }
 
+    //region ELECTION HANDLING
     public void startElection(){
         List<ManagedChannel> copy = parent.getGTPeerListCopy();
         if(copy.size()==0){
@@ -289,7 +284,7 @@ public class MessageDispatcher {
                 StatusRuntimeException t=(StatusRuntimeException)throwable;
                 if(t.getStatus().isOk()) return;
                 printErr("during start election " +t.getStatus());
-                //t.printStackTrace();
+
 
                 if(t.getStatus().equals(Status.DEADLINE_EXCEEDED)){ //only happens when a message is sent to the previous coordinator, if it hasn't reappeared yet
                     printErr("deadline problem detected: previous coordinator unreachable");
@@ -342,7 +337,9 @@ public class MessageDispatcher {
         copy.stream().parallel().forEach(chan->HouseManagementGrpc.newStub(chan).newCoordinator(coord, respObs));
         lampClock.afterEvent();
     }
+    //endregion
 
+    //region BOOST HANDLING
     public void ricartAgrawala(List<ManagedChannel> copy) {
 
         if(isInBoost()) {
@@ -476,6 +473,6 @@ public class MessageDispatcher {
 
         copyPeer.stream().parallel().forEach(chan->HouseManagementGrpc.newStub(chan).boostResponse(resp, respObs));
     }
-
+    //endregion
     //endregion
 }

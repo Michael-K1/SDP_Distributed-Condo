@@ -38,11 +38,10 @@ public class HousePeer {
     private PeerServer listener;
 
     public final Hashtable<Integer, ManagedChannel> peerList ;
-    public SmartMeterSimulator simulator;
+    private SmartMeterSimulator simulator;
     private final MessageDispatcher mexDispatcher;
 
     public final LamportClock lamportClock;
-
 
     public  static void main (String[] args){
         Random rand=new Random(System.nanoTime());
@@ -81,7 +80,6 @@ public class HousePeer {
         simulator = new SmartMeterSimulator(new SlidingBuffer(this, 24, 0.5f));
         listener  = new PeerServer(this);
 
-
         simulator.start();
 
         new Thread(listener).start();
@@ -107,16 +105,18 @@ public class HousePeer {
                 case 2: if (isCoordinator())
                             print("I am the Coordinator!");
                         else
-                            print("coordinator is: "+coordinator);
+                            print("Coordinator is: "+coordinator);
                     break;
-                case 3: Set<Integer> keys=peerList.keySet();
+                case 3: Set<Integer> keys;
+                        synchronized (peerList) {
+                             keys = peerList.keySet();
+                        }
                         for(int x:keys){
                             print("House: "+x);
                         }
                     break;
-                case 4:printMenu();
+                case 4: printMenu();
                     break;
-                default:
             }
         }
     }
@@ -129,7 +129,8 @@ public class HousePeer {
                 "Press -3- to show the house registered in the complex\n"+
                 "Press -4- to print this menu\n"+
                 "Press -0- to exit the Complex\n"+
-                "##########################################################\n");
+                "##########################################################\n"
+        );
     }
 
     //region APPLICATION START

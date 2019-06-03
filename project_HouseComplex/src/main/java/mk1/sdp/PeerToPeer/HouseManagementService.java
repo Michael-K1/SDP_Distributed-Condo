@@ -8,18 +8,22 @@ import mk1.sdp.GRPC.PeerMessages.*;
 import mk1.sdp.PeerToPeer.Mutex.LamportClock;
 import mk1.sdp.misc.Pair;
 
-import java.util.*;
-
 import static mk1.sdp.misc.Common.*;
+
+import java.util.*;
 
 public class HouseManagementService extends HouseManagementImplBase{
     private final HousePeer parent;
     private final int homeID;
+
+    
     private final LamportClock lampClock;
     private final Hashtable<Integer, LinkedList<Pair<Long,Double>>> complexMeans;
     private  Timer timer;
+
     private final MessageDispatcher mexDispatcher;
     private boolean askingBoost=false;
+
     public HouseManagementService(HousePeer parent){
         this.parent=parent;
         this.homeID =parent.HomeID;
@@ -58,9 +62,6 @@ public class HouseManagementService extends HouseManagementImplBase{
         responseObserver.onNext(simpleAck(true, s));
         responseObserver.onCompleted();
 
-//        if(parent.isCoordinator()){
-//            startScheduler();
-//        }
         startScheduler();
     }
 
