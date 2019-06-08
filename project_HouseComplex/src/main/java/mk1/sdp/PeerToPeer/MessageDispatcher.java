@@ -30,6 +30,7 @@ class MessageDispatcher {
     private final int port;
     private final WebTarget toLocalStat;
     private final WebTarget toGlobalStat;
+    private final WebTarget pushEvent;
 
     //mutex
     private final LamportClock lampClock;
@@ -50,7 +51,7 @@ class MessageDispatcher {
 
         toLocalStat = server.path("/complex/house/add").queryParam("id", id);
         toGlobalStat = server.path("/complex/global/add");
-
+        pushEvent=server.path("/eventBroadcast");
         setUsingBoost(false);
     }
 
@@ -251,7 +252,7 @@ class MessageDispatcher {
     private boolean sendToServer(WebTarget wt, Pair<Long, Double> measure, int ...retries) {
         Response resp=null;
         try {
-            print(wt.getUri().getPath());
+            //print(wt.getUri().getPath());
              resp = wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).put(Entity.entity(measure, MediaType.APPLICATION_JSON_TYPE));
         }catch (ProcessingException e){
             if(retries.length==0){
@@ -277,7 +278,7 @@ class MessageDispatcher {
     }
 
     //region ELECTION HANDLING
-    public void startElection(){
+    private void startElection(){
         List<ManagedChannel> copy = parent.getGTPeerListCopy();
         if(copy.size()==0){
             becomeCoordinator();//I am new coordinator
@@ -360,6 +361,8 @@ class MessageDispatcher {
             return;
         }
 
+        pushEvent.request(MediaType.TEXT_PLAIN).post(Entity.entity("BOOST REQUEST FROM: HOUSE "+id,MediaType.TEXT_PLAIN_TYPE));    //push notification: boost request
+
         RequestBoost request=RequestBoost.newBuilder().setRequester(id).setLamportTimestamp(lampClock.peekClock()).build();
 
         final Pair<Integer, Object> responses = Pair.of(0, null); //left=number of answers, right= number of permission denied
@@ -402,8 +405,6 @@ class MessageDispatcher {
         lampClock.afterEvent();
     }
 
-
-
     private synchronized void boost(){
         if(isInBoost()) return;
         setUsingBoost(true);
@@ -426,8 +427,6 @@ class MessageDispatcher {
 
         new Thread(runner).start();
     }
-
-
     //endregion
     //endregion
 

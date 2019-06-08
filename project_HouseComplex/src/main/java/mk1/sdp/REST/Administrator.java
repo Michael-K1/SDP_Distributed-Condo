@@ -6,6 +6,10 @@ import mk1.sdp.REST.Resources.Home;
 import mk1.sdp.misc.Pair;
 
 import org.glassfish.jersey.client.ClientConfig;
+import org.glassfish.jersey.media.sse.EventListener;
+import org.glassfish.jersey.media.sse.EventSource;
+import org.glassfish.jersey.media.sse.InboundEvent;
+import org.glassfish.jersey.media.sse.SseFeature;
 
 
 import javax.ws.rs.ProcessingException;
@@ -19,9 +23,9 @@ import javax.ws.rs.core.Response;
 import java.net.URI;
 
 import java.net.URISyntaxException;
-import java.sql.Timestamp;
+
 import java.util.*;
-import java.util.concurrent.TimeUnit;
+
 
 import static mk1.sdp.misc.Common.*;
 //https://jersey.github.io/apidocs/2.25.1/jersey/index.html
@@ -30,6 +34,9 @@ public class Administrator {
     private Client client=null;
     private WebTarget webTarget;
     private Scanner fromShell;
+    private Client pushListenerClient;
+    private WebTarget pushListenerWT;
+    private EventSource pushSource;
 
     public static void main (String[] args){
         Administrator admin =new Administrator();
@@ -43,6 +50,19 @@ public class Administrator {
         ClientConfig c=new ClientConfig();
         client= ClientBuilder.newClient(c);
         webTarget=client.target(getBaseURI());
+
+        pushListenerClient= ClientBuilder.newBuilder().register(SseFeature.class).build();
+        pushListenerWT=pushListenerClient.target("http://"+RESTServer.HOST+":"+RESTServer.PORT+"/eventBroadcast");
+        pushSource=EventSource.target(pushListenerWT).build();
+        EventListener listener =  new EventListener() {
+            @Override
+            public void onEvent(InboundEvent inboundEvent) {
+                print(inboundEvent.getName()+": "+inboundEvent.readData(String.class));
+            }
+        };
+        pushSource.register(listener,"from-house-network");
+        pushSource.open();
+
     }
 
     private URI getBaseURI() {
@@ -58,7 +78,7 @@ public class Administrator {
 
     private void Menu(){
         int choice=0;
-
+        registerForPushNotification();
         while(true){
             choice=printMenu();
 
@@ -76,12 +96,30 @@ public class Administrator {
                 default:
                         printHigh("admin","closing the client...");
                         fromShell.close();      //closing the input stream before leaving
+                        client.close();
+                        pushSource.close();
+                        pushListenerClient.close();
                         return;
             }
 
         }
     }
 
+    private void registerForPushNotification(int ...retries) {
+        try {
+            pushListenerWT.request(MediaType.SERVER_SENT_EVENTS).get(); //push  listener registration
+        } catch (ProcessingException e) {
+            if (retries.length == 0) {
+                printErr("while registering for push notification.\tretrying");
+                registerForPushNotification(1);
+            } else if (retries[0] <= 5) {
+                printErr("attempt  "+retries[0]+" .\tretrying");
+                registerForPushNotification(retries[0] + 1);
+            } else {
+                printErr("unable to register for push notification");
+            }
+        }
+    }
     //region REST QUERY
     private void getHouseList() {
 

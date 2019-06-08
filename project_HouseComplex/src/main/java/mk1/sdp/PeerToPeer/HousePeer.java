@@ -35,6 +35,7 @@ public class HousePeer {
     private Scanner fromShell;
     private Client client;
     private WebTarget serverREST;
+    private WebTarget pushEvent;
     private PeerServer listener;
 
     final Hashtable<Integer, ManagedChannel> peerTable;
@@ -66,6 +67,7 @@ public class HousePeer {
         ClientConfig c=new ClientConfig();
         client= ClientBuilder.newClient(c);
         serverREST =client.target(getBaseURI());
+        pushEvent=serverREST.path("eventBroadcast");
         mexDispatcher=new MessageDispatcher(this,serverREST);
     }
 
@@ -237,11 +239,17 @@ public class HousePeer {
 
     private Response tryConnection(WebTarget wt,boolean registration, int ...retries){
         Response resp=null;
+        String message=null;
         try {
-            if(registration)
+            if(registration) {
+                message="REGISTERED: HOUSE "+HomeID;
                 resp = wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).post(Entity.entity(new Home(HomeID, host, port), MediaType.APPLICATION_JSON_TYPE));
-            else//remotion
+            }else {//remotion
+                message="REMOVED: HOUSE "+HomeID;
                 resp = wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).delete();
+            }
+            pushEvent.request(MediaType.TEXT_PLAIN).post(Entity.entity(message,MediaType.TEXT_PLAIN_TYPE));    //push notification: add/delete
+
         }catch (ProcessingException p){
             if(retries.length==0){
                 Common.printErr("Connection refused by server.\tretrying...");
