@@ -10,7 +10,7 @@ import mk1.sdp.GRPC.PeerMessages.*;
 
 import mk1.sdp.PeerToPeer.Mutex.LamportClock;
 import mk1.sdp.misc.Pair;
-import mk1.sdp.misc.SyncObj;
+import mk1.sdp.PeerToPeer.Mutex.SyncObj;
 
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.WebTarget;
@@ -22,7 +22,7 @@ import java.util.concurrent.TimeUnit;
 
 import static mk1.sdp.misc.Common.*;
 
-public class MessageDispatcher {
+class MessageDispatcher {
     private final int id;
     private final HousePeer parent;
     private final String address;
@@ -38,7 +38,7 @@ public class MessageDispatcher {
     private boolean askingBoost;
 
 
-    public MessageDispatcher(HousePeer parent,WebTarget server){
+    MessageDispatcher(HousePeer parent, WebTarget server){
         this.parent=parent;
         synchronized (this.parent){
             this.id=parent.HomeID;
@@ -54,7 +54,7 @@ public class MessageDispatcher {
     }
 
     //region NETWORK MESSAGES
-    public void addSelfToPeers(List<ManagedChannel> copy){
+    void addSelfToPeers(List<ManagedChannel> copy){
         SelfIntroduction selfIntro = SelfIntroduction.newBuilder().setId(id).setAddress(address).setPort(port).build();
 
         final  Pair<Integer, Integer> p = Pair.of(0,-1);
@@ -88,8 +88,6 @@ public class MessageDispatcher {
 
             @Override
             public void onCompleted() {
-
-//                synchronized (MessageDispatcher.this){
                 synchronized (p){
                     p.left+=1;
                     print("[HOUSE "+id+"] successful introduction: "+p.left+"/"+copy.size());
@@ -112,7 +110,7 @@ public class MessageDispatcher {
         lampClock.afterEvent();
     }
 
-    public void removeSelfFromPeers(List<ManagedChannel> copy){
+    void removeSelfFromPeers(List<ManagedChannel> copy){
         SelfIntroduction selfIntro = SelfIntroduction.newBuilder().setId(id).build();
 
         final int[] count = {0};
@@ -152,7 +150,7 @@ public class MessageDispatcher {
 //        copy.stream().parallel().forEach(chan->HouseManagementGrpc.newStub(chan).withDeadlineAfter(5, TimeUnit.SECONDS).removeHome(selfIntro, respObs));
     }
 
-    public void sendGlobalStatistics( Pair<Long,Double> measure){
+    void sendGlobalStatistics(Pair<Long, Double> measure){
         if (!parent.isCoordinator())return;
 
         if(sendToServer(toGlobalStat, measure)) {
@@ -188,7 +186,7 @@ public class MessageDispatcher {
         lampClock.afterEvent();
     }
 
-    public void sendToPeer(List<ManagedChannel> copy, Pair<Long, Double> measure) {
+    void sendToPeer(List<ManagedChannel> copy, Pair<Long, Double> measure) {
 
 
         if(sendToServer(toLocalStat, measure)){
@@ -200,7 +198,6 @@ public class MessageDispatcher {
         }
 
         Measure newMean= Measure.newBuilder().setSenderID(id).setTimeStamp(measure.left).setMeasurement(measure.right).build();
-
 
         final Pair<Integer, Boolean> respVal = Pair.of(0, false);
 
@@ -220,6 +217,9 @@ public class MessageDispatcher {
             @Override
             public void onError(Throwable throwable) {
                 StatusRuntimeException t=(StatusRuntimeException)throwable;
+                synchronized (respVal){
+                    respVal.left+=1;
+                }
                 if(t.getStatus().isOk()) return;
                 printErr("during peer broadcast "+t.getStatus());
 
@@ -340,7 +340,7 @@ public class MessageDispatcher {
     //endregion
 
     //region BOOST HANDLING
-    public void ricartAgrawala(List<ManagedChannel> copy) {
+    void ricartAgrawala(List<ManagedChannel> copy) {
 
         if(isInBoost()) {
             printErr("already in boost mode");
@@ -349,21 +349,14 @@ public class MessageDispatcher {
 
         RequestBoost request=RequestBoost.newBuilder().setRequester(id).setLamportTimestamp(lampClock.peekClock()).build();
 
-        final Pair<Integer,Integer> responses=Pair.of(0,0); //left=number of answers, right= number of permission denied
+        final Pair<Integer, Object> responses = Pair.of(0, null); //left=number of answers, right= number of permission denied
 
         StreamObserver<Ack> respObs= new StreamObserver<Ack>() {
             @Override
             public void onNext(Ack ack) {
                 lampClock.checkLamport(ack);
 
-                synchronized (responses){
-                    if(!ack.getAck()){
-                        responses.right=responses.right+1;
-                        printRED(ack.getMessage());
-                    }else {
-                        print(ack.getMessage());
-                    }
-                }
+                print(ack.getMessage());
             }
 
             @Override

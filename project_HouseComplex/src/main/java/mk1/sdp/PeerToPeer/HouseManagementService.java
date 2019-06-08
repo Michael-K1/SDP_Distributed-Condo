@@ -7,7 +7,7 @@ import mk1.sdp.GRPC.HouseManagementGrpc.HouseManagementImplBase;
 import mk1.sdp.GRPC.PeerMessages.*;
 import mk1.sdp.PeerToPeer.Mutex.LamportClock;
 import mk1.sdp.misc.Pair;
-import mk1.sdp.misc.SyncObj;
+import mk1.sdp.PeerToPeer.Mutex.SyncObj;
 
 import static mk1.sdp.misc.Common.*;
 
@@ -58,7 +58,7 @@ public class HouseManagementService extends HouseManagementImplBase{
         }
 
 
-        responseObserver.onNext(simpleAck(true, s));
+        responseObserver.onNext(simpleAck(s));
         responseObserver.onCompleted();
 
         startScheduler();
@@ -96,7 +96,7 @@ public class HouseManagementService extends HouseManagementImplBase{
         }
         //testTimeWaster();
 
-        responseObserver.onNext(simpleAck(true,s));
+        responseObserver.onNext(simpleAck(s));
         responseObserver.onCompleted();
 
         if(parent.isCoordinator() && sender==homeID){
@@ -117,7 +117,7 @@ public class HouseManagementService extends HouseManagementImplBase{
             complexMeans.get(sender).offerLast(mean);
         }
 
-        responseObserver.onNext(simpleAck(true,""));
+        responseObserver.onNext(simpleAck(""));
         responseObserver.onCompleted();
     }
 
@@ -127,7 +127,7 @@ public class HouseManagementService extends HouseManagementImplBase{
 
         printMeasure("\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tGLOBAL MEAN:", globalMean);
 
-        responseObserver.onNext(simpleAck(true,""));
+        responseObserver.onNext(simpleAck(""));
         responseObserver.onCompleted();
 
     }
@@ -135,7 +135,7 @@ public class HouseManagementService extends HouseManagementImplBase{
     @Override
     public void election(Coordinator request, StreamObserver<Ack> responseObserver) {
         //testTimeWaster(6);
-        responseObserver.onNext(simpleAck(true,""));
+        responseObserver.onNext(simpleAck(""));
         responseObserver.onCompleted();
 
 
@@ -146,7 +146,7 @@ public class HouseManagementService extends HouseManagementImplBase{
         int coord=request.getCoordinatorID();
         parent.setCoordinator(coord);
         //testTimeWaster(6);
-        responseObserver.onNext(simpleAck(true,"NEW COORDINATOR IS: "+coord));
+        responseObserver.onNext(simpleAck("NEW COORDINATOR IS: "+coord));
         responseObserver.onCompleted();
 
 
@@ -167,19 +167,19 @@ public class HouseManagementService extends HouseManagementImplBase{
         while(mexDispatcher.isInBoost() || (mexDispatcher.isAskingBoost() && lampClock.before(otherClock))){
             // wait for boost to end
             printRED("add "+sender+" to boost queue");
-            SyncObj.getInstance().waiter();
+            SyncObj.getInstance().waiter(5);
         }
 
-        responseObserver.onNext(simpleAck(true,"PERMISSION TO BOOST GRANTED"));
+        responseObserver.onNext(simpleAck("PERMISSION TO BOOST GRANTED"));
         responseObserver.onCompleted();
     }
 
     //endregion
 
-    private Ack simpleAck(boolean val,String text){
+    private Ack simpleAck(String text){
         lampClock.afterEvent();
         synchronized (parent) {
-            return Ack.newBuilder().setAck(val).setCoordinator(parent.getCoordinator()).setMessage("[REMOTE "+homeID+"] "+text).setLamportTimestamp(lampClock.peekClock()).setSender(homeID).build();
+            return Ack.newBuilder().setAck(true).setCoordinator(parent.getCoordinator()).setMessage("[REMOTE "+homeID+"] "+text).setLamportTimestamp(lampClock.peekClock()).setSender(homeID).build();
         }
     }
 
@@ -223,8 +223,8 @@ public class HouseManagementService extends HouseManagementImplBase{
             final double[] val = {0};
             pairs.forEach(p -> val[0] += p.right);
 
-            //pairs.forEach(p->printHigh("coord "+homeID,"single value "+p.right));
-            //printHigh("\ncoord "+homeID,"sum of the local means "+val[0]+" with n° Peer= "+pairs.size());
+            pairs.forEach(p->printHigh("coord "+homeID,"single value "+p.right+ " time "+new Time(p.left).toString()));
+            printHigh("\ncoord "+homeID,"sum of the local means "+val[0]+" with n° Peer= "+pairs.size());
 
             Pair<Long, Double> globalMean = Pair.of(System.currentTimeMillis(), val[0] / pairs.size());
             pairs.clear();

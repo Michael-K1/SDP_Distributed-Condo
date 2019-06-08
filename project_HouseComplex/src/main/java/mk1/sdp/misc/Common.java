@@ -61,22 +61,19 @@ public class Common {
         return val;
     }
 
+
+    public static void testTimeWaster(int sec){
+
+        printRED("TEST: waiting for "+sec+" sec: started");
+        timeWaster(sec);
+        printRED("TEST: waiting for "+sec+" sec: finished");
+
+    }
+
     /**
      * method that wastes some time(less than deadline)
      * @param sec =seconds to be wasted
      */
-    public static void testTimeWaster(int sec){
-
-        try {
-            printRED("TEST: waiting for "+sec+" sec: started");
-            TimeUnit.SECONDS.sleep(sec);
-            printRED("TEST: waiting for "+sec+" sec: finished");
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-
-    }
-
     public static void timeWaster(int sec){
         try {
             TimeUnit.SECONDS.sleep(sec);

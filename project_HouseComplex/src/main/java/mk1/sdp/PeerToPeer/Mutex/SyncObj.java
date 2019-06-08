@@ -1,4 +1,4 @@
-package mk1.sdp.misc;
+package mk1.sdp.PeerToPeer.Mutex;
 
 import static mk1.sdp.misc.Common.printErr;
 

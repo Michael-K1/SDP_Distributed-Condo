@@ -68,7 +68,7 @@ public class PeerServer implements Runnable{
         }
     }
 
-    public void stop(){
+    void stop(){
         if(server!=null ) {
             try {
                 server.shutdown().awaitTermination(10, TimeUnit.SECONDS);

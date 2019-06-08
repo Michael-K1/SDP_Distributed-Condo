@@ -26,10 +26,10 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 public class HousePeer {
-    public final int HomeID;
-    public final String host;
-    public final int port;
-    public final String hostServer;
+    final int HomeID;
+    final String host;
+    final int port;
+    private final String hostServer;
     private int coordinator=-1;
 
     private Scanner fromShell;
@@ -37,11 +37,11 @@ public class HousePeer {
     private WebTarget serverREST;
     private PeerServer listener;
 
-    public final Hashtable<Integer, ManagedChannel> peerList ;
+    final Hashtable<Integer, ManagedChannel> peerList ;
     private SmartMeterSimulator simulator;
     private final MessageDispatcher mexDispatcher;
 
-    public final LamportClock lamportClock;
+    final LamportClock lamportClock;
 
     public  static void main (String[] args){
         Random rand=new Random(System.nanoTime());
@@ -244,10 +244,12 @@ public class HousePeer {
         }catch (ProcessingException p){
             if(retries.length==0){
                 Common.printErr("Connection refused by server.\tretrying...");
+                timeWaster(5);
                 return tryConnection(wt,registration,1);
             }
             if (retries[0]<=5) {
                 Common.printErr("attempt "+retries[0]+". Connection refused by server.\tretrying...");
+                timeWaster(5);
                 return tryConnection(wt,registration,retries[0]+1);
             }
             else {
@@ -258,36 +260,36 @@ public class HousePeer {
         return resp;
     }
 
-    public void broadcastLocalStat(Pair<Long,Double> measure){
+    void broadcastLocalStat(Pair<Long, Double> measure){
         mexDispatcher.sendToPeer(getFullPeerListCopy(), measure);
     }
 
     //region GETTER/SETTER
-    public int getCoordinator() {
+    int getCoordinator() {
         return coordinator;
     }
 
-    public synchronized void setCoordinator(int coord) {
+    synchronized void setCoordinator(int coord) {
         if(this.coordinator==coord)return;
 
         this.coordinator = coord;
     }
 
-    public MessageDispatcher getMexDispatcher() {
+    MessageDispatcher getMexDispatcher() {
         return mexDispatcher;
     }
-    public SmartMeterSimulator getSimulator(){
+    SmartMeterSimulator getSimulator(){
         return this.simulator;
     }
-    public synchronized boolean isCoordinator(){
+    synchronized boolean isCoordinator(){
         return coordinator==this.HomeID;
     }
-    public synchronized boolean isCoordinator(int id){
+    synchronized boolean isCoordinator(int id){
         if(coordinator==-1)return false;
         return coordinator==id;
     }
 
-    public  List<ManagedChannel> getFullPeerListCopy(){
+    List<ManagedChannel> getFullPeerListCopy(){
         List<ManagedChannel> copy;
         synchronized (peerList){
              copy = new ArrayList<>(peerList.values());
@@ -295,7 +297,7 @@ public class HousePeer {
         return copy;
     }
 
-    public List<ManagedChannel> getGTPeerListCopy() {   //greater id then this.is
+    List<ManagedChannel> getGTPeerListCopy() {   //greater id then this.is
         List<ManagedChannel> tmp=new ArrayList<>();
         synchronized (peerList){
             for (Integer key : peerList.keySet()) {
