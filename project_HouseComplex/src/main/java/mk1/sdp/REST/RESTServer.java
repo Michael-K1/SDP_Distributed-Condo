@@ -1,9 +1,13 @@
 package mk1.sdp.REST;
 
-import com.sun.jersey.api.container.httpserver.HttpServerFactory;
-import com.sun.net.httpserver.HttpServer;
+import mk1.sdp.REST.Services.ComplexService;
+import mk1.sdp.REST.Services.PushNotification;
+import org.glassfish.grizzly.http.server.HttpServer;
+import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory;
+import org.glassfish.jersey.server.ResourceConfig;
 
 import java.io.IOException;
+import java.net.URI;
 
 
 public class RESTServer {
@@ -14,7 +18,11 @@ public class RESTServer {
 
     public static void main(String[] args)  {
         HttpServer server = createServerREST("http://"+HOST+":"+PORT+"/");
-        server.start();
+        try {
+            server.start();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
         System.out.println("Server running!");
         System.out.println("Server started on: http://"+HOST+":"+PORT);
@@ -30,18 +38,14 @@ public class RESTServer {
         }
 
         System.out.println("Stopping server");
-        server.stop(0);
+        server.stop();
         System.out.println("Server stopped");
     }
 
     private static HttpServer createServerREST(String address){
        HttpServer server=null;
-        try {
-           server= HttpServerFactory.create(address);
-        } catch (IOException e) {
-            System.err.println("error while creating the server rest...\n".toUpperCase()+e.getMessage());
-            e.printStackTrace();
-        }
+        server =GrizzlyHttpServerFactory.createHttpServer(URI.create(address),new ResourceConfig(ComplexService.class, PushNotification.class));
+
         return server;
     }
 }
