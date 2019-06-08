@@ -37,7 +37,7 @@ public class HousePeer {
     private WebTarget serverREST;
     private PeerServer listener;
 
-    final Hashtable<Integer, ManagedChannel> peerList ;
+    final Hashtable<Integer, ManagedChannel> peerTable;
     private SmartMeterSimulator simulator;
     private final MessageDispatcher mexDispatcher;
 
@@ -60,7 +60,7 @@ public class HousePeer {
         this.host=host;
         this.port=port;
         this.hostServer=hostServer;
-        peerList = new Hashtable<>();
+        peerTable = new Hashtable<>();
         lamportClock = new LamportClock(HomeID);
 
         ClientConfig c=new ClientConfig();
@@ -98,6 +98,8 @@ public class HousePeer {
 
             switch (choice){
                 case 0: isDeleted=deleteHouse();
+                        if(!isDeleted)
+                            printRED("unable to leave network. \nServer not responding ");
                     break;
                 case 1:mexDispatcher.ricartAgrawala(getFullPeerListCopy());
                     break;
@@ -107,8 +109,8 @@ public class HousePeer {
                             print("Coordinator is: "+coordinator);
                     break;
                 case 3: Set<Integer> keys;
-                        synchronized (peerList) {
-                             keys = peerList.keySet();
+                        synchronized (peerTable) {
+                             keys = peerTable.keySet();
                         }
                         for(int x:keys){
                             print("House: "+x);
@@ -163,7 +165,7 @@ public class HousePeer {
         for(Home x :h){
             ManagedChannel channel = ManagedChannelBuilder.forAddress(x.address, x.listeningPort).usePlaintext(true).build();
 
-            peerList.put(x.HomeID,channel);
+            peerTable.put(x.HomeID,channel);
         }
 
         mexDispatcher.addSelfToPeers(getFullPeerListCopy());
@@ -184,7 +186,7 @@ public class HousePeer {
     //endregion
     //region APPLICATION END
 
-    private boolean deleteHouse(int ...tries){
+    private boolean deleteHouse(){
         WebTarget wt = serverREST.path("/complex/delete").queryParam("id", HomeID);
         Response resp=tryConnection(wt,false );
 
@@ -201,11 +203,10 @@ public class HousePeer {
         dropConnections();
         print("House "+ HomeID +" successfully deleted!");
 
-
         return true;
     }
     private void dropConnections() {
-        if(peerList.isEmpty()) {
+        if(peerTable.isEmpty()) {
             listener.stop();
             client.close();
             return;
@@ -213,8 +214,8 @@ public class HousePeer {
 
         List<ManagedChannel> copy = getFullPeerListCopy();
 
-        synchronized (peerList){
-            peerList.clear();
+        synchronized (peerTable){
+            peerTable.clear();
         }
 
         mexDispatcher.removeSelfFromPeers(copy);
@@ -291,18 +292,18 @@ public class HousePeer {
 
     List<ManagedChannel> getFullPeerListCopy(){
         List<ManagedChannel> copy;
-        synchronized (peerList){
-             copy = new ArrayList<>(peerList.values());
+        synchronized (peerTable){
+             copy = new ArrayList<>(peerTable.values());
         }
         return copy;
     }
 
     List<ManagedChannel> getGTPeerListCopy() {   //greater id then this.is
         List<ManagedChannel> tmp=new ArrayList<>();
-        synchronized (peerList){
-            for (Integer key : peerList.keySet()) {
+        synchronized (peerTable){
+            for (Integer key : peerTable.keySet()) {
                 if(key>this.HomeID)
-                    tmp.add(peerList.get(key));
+                    tmp.add(peerTable.get(key));
             }
         }
         return tmp;
@@ -310,10 +311,10 @@ public class HousePeer {
 
     public List<ManagedChannel> getSetPeerList(List<Integer> queue){
         List<ManagedChannel> copy=new ArrayList<>(queue.size());
-        synchronized (peerList){
+        synchronized (peerTable){
             for (Integer key : queue) {
-                if(peerList.containsKey(key))
-                    copy.add(peerList.get(key));
+                if(peerTable.containsKey(key))
+                    copy.add(peerTable.get(key));
             }
         }
 

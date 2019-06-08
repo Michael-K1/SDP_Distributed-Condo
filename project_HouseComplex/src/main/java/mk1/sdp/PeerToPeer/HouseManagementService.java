@@ -40,12 +40,12 @@ public class HouseManagementService extends HouseManagementImplBase{
         String s;
 
         //testTimeWaster(60);
-        synchronized (parent.peerList){
-            if(!parent.peerList.containsKey(sender)){
+        synchronized (parent.peerTable){
+            if(!parent.peerTable.containsKey(sender)){
                 ManagedChannel channel= ManagedChannelBuilder.forAddress(request.getAddress(),request.getPort()).usePlaintext(true).build();
-                parent.peerList.put(sender,channel);
-                s="added "+sender+" to peerList.\t Hello!";
-                print("[HOUSE "+ homeID +"] added "+sender+" to peerList.");
+                parent.peerTable.put(sender,channel);
+                s="added "+sender+" to peerTable.\t Hello!";
+                print("[HOUSE "+ homeID +"] added "+sender+" to peerTable.");
 
                 synchronized (complexMeans){
                     if(!complexMeans.containsKey(sender)){
@@ -70,16 +70,16 @@ public class HouseManagementService extends HouseManagementImplBase{
 
         String s;
         if(request.getId()!= homeID) {//if NOT self removal
-            printHigh("HOUSE "+ homeID," trying removal of  "+sender+" from peerList....");
+            printHigh("HOUSE "+ homeID," trying removal of  "+sender+" from peerTable....");
 
             if(parent.isCoordinator(sender)){
                 parent.setCoordinator(-1);
             }
 
-            synchronized (parent.peerList){
-                if(parent.peerList.containsKey(sender)) {
-                    parent.peerList.remove(sender);
-                    s = "removed from peerList ";
+            synchronized (parent.peerTable){
+                if(parent.peerTable.containsKey(sender)) {
+                    parent.peerTable.remove(sender);
+                    s = "removed from peerTable ";
                     printHigh("HOUSE "+ homeID," removal of "+sender+" COMPLETED!");
 
                     synchronized (complexMeans){
@@ -223,8 +223,8 @@ public class HouseManagementService extends HouseManagementImplBase{
             final double[] val = {0};
             pairs.forEach(p -> val[0] += p.right);
 
-            pairs.forEach(p->printHigh("coord "+homeID,"single value "+p.right+ " time "+new Time(p.left).toString()));
-            printHigh("\ncoord "+homeID,"sum of the local means "+val[0]+" with n° Peer= "+pairs.size());
+//            pairs.forEach(p->printHigh("coord "+homeID,"single value "+p.right+ " time "+new Timestamp(p.left).toString()+"\n"));
+//            printHigh("coord "+homeID,"sum of the local means "+val[0]+" with n° Peer= "+pairs.size());
 
             Pair<Long, Double> globalMean = Pair.of(System.currentTimeMillis(), val[0] / pairs.size());
             pairs.clear();

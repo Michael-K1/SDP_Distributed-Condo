@@ -12,6 +12,7 @@ import mk1.sdp.PeerToPeer.Mutex.LamportClock;
 import mk1.sdp.misc.Pair;
 import mk1.sdp.PeerToPeer.Mutex.SyncObj;
 
+import javax.ws.rs.ProcessingException;
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
@@ -153,9 +154,7 @@ class MessageDispatcher {
     void sendGlobalStatistics(Pair<Long, Double> measure){
         if (!parent.isCoordinator())return;
 
-        if(sendToServer(toGlobalStat, measure)) {
-            return;
-        }
+        sendToServer(toGlobalStat, measure);
 
         List<ManagedChannel> copy=parent.getFullPeerListCopy();
 
@@ -182,20 +181,13 @@ class MessageDispatcher {
             }
         };
 
-        copy.stream().parallel().forEach(chan->HouseManagementGrpc.newStub(chan).withDeadlineAfter(5, TimeUnit.SECONDS).sendGlobalMean(globalMean,respObs));
+        copy.stream().parallel().forEach(chan->HouseManagementGrpc.newStub(chan).sendGlobalMean(globalMean,respObs));
         lampClock.afterEvent();
     }
 
     void sendToPeer(List<ManagedChannel> copy, Pair<Long, Double> measure) {
 
-
-        if(sendToServer(toLocalStat, measure)){
-//            if(tries.length==0)           //todo controllo se non riesce ad inviare
-//                sendLocalStatistics(measure, 1);
-//            else if (tries)
-
-            return;
-        }
+        sendToServer(toLocalStat, measure);
 
         Measure newMean= Measure.newBuilder().setSenderID(id).setTimeStamp(measure.left).setMeasurement(measure.right).build();
 
@@ -256,9 +248,30 @@ class MessageDispatcher {
      * @param measure = measure to be sent to the server
      * @return true if it was NOT able to send a request to the server
      */
-    private boolean sendToServer(WebTarget wt, Pair<Long, Double> measure) {
-        Response resp = wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).put(Entity.entity(measure, MediaType.APPLICATION_JSON_TYPE));
+    private boolean sendToServer(WebTarget wt, Pair<Long, Double> measure, int ...retries) {
+        Response resp=null;
+        try {
+            print(wt.getUri().getPath());
+             resp = wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).put(Entity.entity(measure, MediaType.APPLICATION_JSON_TYPE));
+        }catch (ProcessingException e){
+            if(retries.length==0){
+                printErr("server unreachable.\tretrying...");
+                timeWaster(5);
+                return sendToServer(wt,measure,1);
+            }
+            if (retries[0]<=5) {
+                printErr("attempt "+retries[0]+". server unreachable.\tretrying...");
+                timeWaster(5);
+                return sendToServer(wt,measure,retries[0]+1);
+            }
+            else {
+                printErr("unable to connect to server.");
+                return true;
+            }
 
+        }catch(IllegalStateException e){
+            printErr("connection to server closed");
+        }
         if(resp==null) return true;
         return responseHasError(resp);
     }
