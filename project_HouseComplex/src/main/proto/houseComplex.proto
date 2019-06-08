@@ -50,5 +50,4 @@ service HouseManagement{
     rpc newCoordinator(Coordinator) returns (Ack){}
 
     rpc boostRequest(RequestBoost)returns (Ack){}
-    rpc boostResponse(ResponseBoost) returns (Ack){}
 }

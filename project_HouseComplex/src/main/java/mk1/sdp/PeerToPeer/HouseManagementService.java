@@ -7,6 +7,7 @@ import mk1.sdp.GRPC.HouseManagementGrpc.HouseManagementImplBase;
 import mk1.sdp.GRPC.PeerMessages.*;
 import mk1.sdp.PeerToPeer.Mutex.LamportClock;
 import mk1.sdp.misc.Pair;
+import mk1.sdp.misc.SyncObj;
 
 import static mk1.sdp.misc.Common.*;
 
@@ -22,7 +23,6 @@ public class HouseManagementService extends HouseManagementImplBase{
     private  Timer timer;
 
     private final MessageDispatcher mexDispatcher;
-    private boolean askingBoost=false;
 
     public HouseManagementService(HousePeer parent){
         this.parent=parent;
@@ -37,11 +37,12 @@ public class HouseManagementService extends HouseManagementImplBase{
     @Override
     public void addHome(SelfIntroduction request, StreamObserver<Ack> responseObserver) {
         int sender=request.getId();
-        ManagedChannel channel= ManagedChannelBuilder.forAddress(request.getAddress(),request.getPort()).usePlaintext(true).build();
         String s;
 
+        //testTimeWaster(60);
         synchronized (parent.peerList){
             if(!parent.peerList.containsKey(sender)){
+                ManagedChannel channel= ManagedChannelBuilder.forAddress(request.getAddress(),request.getPort()).usePlaintext(true).build();
                 parent.peerList.put(sender,channel);
                 s="added "+sender+" to peerList.\t Hello!";
                 print("[HOUSE "+ homeID +"] added "+sender+" to peerList.");
@@ -52,12 +53,10 @@ public class HouseManagementService extends HouseManagementImplBase{
                     }
                 }
             }else {
-                channel.shutdown();
                 s="says Hello!";
             }
         }
 
-        //testTimeWaster();
 
         responseObserver.onNext(simpleAck(true, s));
         responseObserver.onCompleted();
@@ -117,6 +116,7 @@ public class HouseManagementService extends HouseManagementImplBase{
             }
             complexMeans.get(sender).offerLast(mean);
         }
+
         responseObserver.onNext(simpleAck(true,""));
         responseObserver.onCompleted();
     }
@@ -157,56 +157,23 @@ public class HouseManagementService extends HouseManagementImplBase{
     }
 
     @Override
-    public void boostRequest(RequestBoost request, StreamObserver<Ack> responseObserver) {
+    public void boostRequest(RequestBoost request, StreamObserver<Ack> responseObserver) {  //todo ad ogni richiesta di boost, chi è in coda viene notificato e fa partire il proprio boost
         int sender=request.getRequester();
         Pair<Integer, Integer> otherClock = Pair.of(sender, request.getLamportTimestamp());
 
         if(homeID!=sender)
             printHigh("house "+homeID, sender+" requested to boost");
 
-        if(mexDispatcher.isInBoost()){
-            mexDispatcher.enqueue(sender);
-            printHigh("house "+homeID, " permission denied to "+sender);
-            responseObserver.onNext(simpleAck(false, "PERMISSION TO BOOST DENIED"));
-
-        }else if(askingBoost && !mexDispatcher.isInBoost()){//if I'm asking boost but have not started yet
-            if(lampClock.before(otherClock)){//if "this" has a lower clock
-                mexDispatcher.enqueue(sender);
-                printRED("[HOUSE "+homeID+"] waiting for boost permission. "+sender+" enqueued!");
-                responseObserver.onNext(simpleAck(false, "ALREADY IN QUEUE FOR BOOST PERMISSION. WAIT YOUR TURN "));
-            }else {
-                responseObserver.onNext(simpleAck(true,"PERMISSION TO BOOST GRANTED"));
-            }
-        }else{
-            if(sender==this.homeID){
-                setAskingBoost(true);
-                //testTimeWaster(10);
-            }
-            responseObserver.onNext(simpleAck(true,"PERMISSION TO BOOST GRANTED"));
+        while(mexDispatcher.isInBoost() || (mexDispatcher.isAskingBoost() && lampClock.before(otherClock))){
+            // wait for boost to end
+            printRED("add "+sender+" to boost queue");
+            SyncObj.getInstance().waiter();
         }
 
+        responseObserver.onNext(simpleAck(true,"PERMISSION TO BOOST GRANTED"));
         responseObserver.onCompleted();
     }
 
-    @Override
-    public void boostResponse(ResponseBoost request, StreamObserver<Ack> responseObserver) {
-        int sender=request.getSender();
-
-
-        setAskingBoost(false);
-        //testTimeWaster(10);
-
-
-        if (request.getBoostPermission()){
-            printHigh("remote "+sender, "PERMISSION TO BOOST GRANTED");
-        }else{
-            printHigh("remote "+sender, "still in boost mode");
-        }
-
-        responseObserver.onNext(simpleAck(true, "notification received"));
-        responseObserver.onCompleted();
-
-    }
     //endregion
 
     private Ack simpleAck(boolean val,String text){
@@ -226,13 +193,6 @@ public class HouseManagementService extends HouseManagementImplBase{
         timer.cancel();
     }
 
-
-
-
-
-    public synchronized void setAskingBoost(boolean askingBoost) {
-        this.askingBoost = askingBoost;
-    }
 
     private class MeanCalculationTask extends TimerTask{
 

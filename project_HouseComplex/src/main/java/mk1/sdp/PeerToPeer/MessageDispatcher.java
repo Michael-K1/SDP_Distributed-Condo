@@ -10,13 +10,13 @@ import mk1.sdp.GRPC.PeerMessages.*;
 
 import mk1.sdp.PeerToPeer.Mutex.LamportClock;
 import mk1.sdp.misc.Pair;
+import mk1.sdp.misc.SyncObj;
 
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -32,8 +32,11 @@ public class MessageDispatcher {
 
     //mutex
     private final LamportClock lampClock;
-    private final LinkedList<Integer> boostQueue;
-    private  boolean usingBoost;
+
+    private boolean usingBoost;
+
+    private boolean askingBoost;
+
 
     public MessageDispatcher(HousePeer parent,WebTarget server){
         this.parent=parent;
@@ -47,9 +50,7 @@ public class MessageDispatcher {
         toLocalStat = server.path("/complex/house/add").queryParam("id", id);
         toGlobalStat = server.path("/complex/global/add");
 
-        boostQueue= new LinkedList<>();
-
-        usingBoost= false;
+        setUsingBoost(false);
     }
 
     //region NETWORK MESSAGES
@@ -145,8 +146,7 @@ public class MessageDispatcher {
             }
         };
 
-        if(!boostQueue.isEmpty())
-            notifyQueue();
+        SyncObj.getInstance().notifier();     //to notify whomever is waiting form "this" in the boost queue
 
         copy.stream().parallel().forEach(chan->HouseManagementGrpc.newStub(chan).removeHome(selfIntro, respObs));
 //        copy.stream().parallel().forEach(chan->HouseManagementGrpc.newStub(chan).withDeadlineAfter(5, TimeUnit.SECONDS).removeHome(selfIntro, respObs));
@@ -254,7 +254,7 @@ public class MessageDispatcher {
      * REST request to server
      * @param wt = target of the request (MUST HAVE THE CORRECT PATH)
      * @param measure = measure to be sent to the server
-     * @return
+     * @return true if it was NOT able to send a request to the server
      */
     private boolean sendToServer(WebTarget wt, Pair<Long, Double> measure) {
         Response resp = wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).put(Entity.entity(measure, MediaType.APPLICATION_JSON_TYPE));
@@ -379,100 +379,68 @@ public class MessageDispatcher {
                 synchronized (responses) {
                     responses.left = responses.left + 1;
                     printHigh("house " + id, "answers received " + responses.left + "/" + copy.size());
-                }
-
-                if(responses.left==copy.size()){
-
-                    if (responses.right<2){//if no more than 1 person is boosting
-                        if(!usingBoost)
-                            boost();
-                    }else{
-                        printErr("Other houses are boosting right now.\twait your turn");
+                    if(responses.left>=copy.size()-1 && !isInBoost()){
+                        setAskingBoost(false);
+                        boost();
                     }
-
                 }
+
 
             }
         };
         printHigh("house "+id,"asking the network the permission to boost");
+        setAskingBoost(true);
+
         copy.stream().parallel().forEach(chan->HouseManagementGrpc.newStub(chan).boostRequest(request, respObs));
 
         lampClock.afterEvent();
     }
 
 
-    public synchronized boolean isInBoost(){
-        return usingBoost;
-    }
 
-    public void enqueue(int id){
-        synchronized (boostQueue){
-            if (!boostQueue.contains(id)) {//no repetition in queue
-                boostQueue.offerLast(id);
-            }
-        }
+    private synchronized void boost(){
+        if(isInBoost()) return;
+        setUsingBoost(true);
+        Runnable runner = () -> {
 
-    }
+            try {
+                printHigh("house "+id,"starting boost");
+                parent.getSimulator().boost();
 
-    private void boost(){
+                testTimeWaster(10);       // for test
+            } catch (InterruptedException e) {
+                printErr("interrupted while boosting");
+            }finally {
+                setUsingBoost(false);
+                printHigh("house "+id,"boost completed!");
+                SyncObj.getInstance().notifier();
 
-        Runnable runner = new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    usingBoost=true;
-                    printHigh("house "+id,"starting boost");
-                    parent.getSimulator().boost();
-
-                    testTimeWaster(10);       //todo for test
-                } catch (InterruptedException e) {
-                    printErr("interrupted while boosting");
-                }finally {
-                    usingBoost=false;
-                    printHigh("house "+id,"boost completed!");
-                    notifyQueue();
-                }
             }
         };
 
         new Thread(runner).start();
     }
 
-    private void notifyQueue() {
-        List<Integer> copyQueue;
-        synchronized (boostQueue){
-            if(boostQueue.isEmpty()) return;
 
-            copyQueue=new LinkedList<>(boostQueue);
-            boostQueue.clear();
-        }
-        List<ManagedChannel> copyPeer=parent.getSetPeerList(copyQueue);
-        if(copyPeer.isEmpty()) return;
-
-        StreamObserver<Ack> respObs= new StreamObserver<Ack>() {
-            @Override
-            public void onNext(Ack ack) {
-                print(ack.getMessage());
-                lampClock.checkLamport(ack);
-
-            }
-
-            @Override
-            public void onError(Throwable throwable) {
-                StatusRuntimeException t=(StatusRuntimeException)throwable;
-                if(t.getStatus().isOk()) return;
-                printErr("during notification of boost queue "+ t.getStatus());
-            }
-
-            @Override
-            public void onCompleted() {
-
-            }
-        };
-        ResponseBoost resp= ResponseBoost.newBuilder().setSender(id).setBoostPermission(true).build();
-
-        copyPeer.stream().parallel().forEach(chan->HouseManagementGrpc.newStub(chan).boostResponse(resp, respObs));
-    }
     //endregion
+    //endregion
+
+    //region GETTER/SETTER
+    private synchronized void setUsingBoost(boolean usingBoost) {
+        this.usingBoost = usingBoost;
+    }
+
+    synchronized boolean isInBoost(){
+        return usingBoost;
+    }
+
+    boolean isAskingBoost() {
+        return askingBoost;
+    }
+
+    private synchronized void setAskingBoost(boolean askingBoost) {
+        this.askingBoost = askingBoost;
+    }
+
     //endregion
 }

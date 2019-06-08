@@ -25,14 +25,7 @@ public class LamportClock {
     }
 
     public boolean before(Pair<Integer,Integer> otherIDClock){   //left=id right=clock
-        if(clock>otherIDClock.right)
-            return false;
-        else if(clock<otherIDClock.right){
-            return true;
-
-        }else{
-            return this.id <= otherIDClock.left;    //if > then this clock is before the received one
-        }
+        return  clock==otherIDClock.right? this.id <= otherIDClock.left: clock<otherIDClock.right;
     }
 
     /**
