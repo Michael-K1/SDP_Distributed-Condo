@@ -21,6 +21,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.Timestamp;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 import static mk1.sdp.misc.Common.*;
 //https://jersey.github.io/apidocs/2.25.1/jersey/index.html
@@ -189,11 +190,13 @@ public class Administrator {
             response = wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).get();
         }catch(ProcessingException e){
             if(retries.length==0){
-                printErr("Connection refused by server.\tretrying..."); //todo mettere una sleep?
+                printErr("Connection refused by server.\tretrying...");
+                timeWaster(5);
                 return obtainResponse(wt,1);
             }
             if (retries[0]<5) {
                 printErr("Connection refused by server.\tretrying...");
+                timeWaster(5);
                 return obtainResponse(wt,retries[0]+1);
             }
             else {

@@ -65,8 +65,7 @@ public class HousePeer {
 
         ClientConfig c=new ClientConfig();
         client= ClientBuilder.newClient(c);
-        serverREST =client.target(getBaseURI());//todo get input da tastiera o args
-
+        serverREST =client.target(getBaseURI());
         mexDispatcher=new MessageDispatcher(this,serverREST);
     }
 
@@ -261,14 +260,6 @@ public class HousePeer {
 
     public void broadcastLocalStat(Pair<Long,Double> measure){
         mexDispatcher.sendToPeer(getFullPeerListCopy(), measure);
-    }
-
-    private void canBoost() {
-        try {
-            simulator.boost();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
     }
 
     //region GETTER/SETTER

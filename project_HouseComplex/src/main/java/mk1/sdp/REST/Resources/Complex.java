@@ -18,7 +18,7 @@ public class Complex {
     @XmlElement(name = "HouseList")
     public final Hashtable<Integer,Home> complex;
     @XmlElement(name = "Global_Stat_List")
-    private final  List<Pair<Long,Double>> complexStat;      //TODO check with the measurements once created the peerToPeer
+    private final  List<Pair<Long,Double>> complexStat;
     private static Complex instance;
     private final Hashtable<Integer,Home> suspendedHouse;
 

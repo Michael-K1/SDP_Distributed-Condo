@@ -8,6 +8,7 @@ import java.text.SimpleDateFormat;
 import java.util.InputMismatchException;
 import java.util.NoSuchElementException;
 import java.util.Scanner;
+import java.util.concurrent.TimeUnit;
 
 public class Common {
     private static Timestamp time =new Timestamp(System.currentTimeMillis());
@@ -68,11 +69,20 @@ public class Common {
 
         try {
             printRED("TEST: waiting for "+sec+" sec: started");
-            Thread.sleep(sec*1000);
+            TimeUnit.SECONDS.sleep(sec);
             printRED("TEST: waiting for "+sec+" sec: finished");
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
 
+    }
+
+    public static void timeWaster(int sec){
+        try {
+            TimeUnit.SECONDS.sleep(sec);
+        } catch (InterruptedException e) {
+            printErr("while waiting");
+            e.printStackTrace();
+        }
     }
 }
