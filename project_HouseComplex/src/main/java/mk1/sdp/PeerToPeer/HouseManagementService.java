@@ -17,14 +17,13 @@ public class HouseManagementService extends HouseManagementImplBase{
     private final HousePeer parent;
     private final int homeID;
 
-    
     private final LamportClock lampClock;
     private final Hashtable<Integer, LinkedList<Pair<Long,Double>>> complexMeans;
     private  Timer timer;
 
     private final MessageDispatcher mexDispatcher;
 
-    public HouseManagementService(HousePeer parent){
+    HouseManagementService(HousePeer parent){
         this.parent=parent;
         this.homeID =parent.HomeID;
         lampClock =parent.lamportClock;
@@ -34,6 +33,7 @@ public class HouseManagementService extends HouseManagementImplBase{
 
     //region RPCs
 
+    //region HOUSE HANDLER
     @Override
     public void addHome(SelfIntroduction request, StreamObserver<Ack> responseObserver) {
         int sender=request.getId();
@@ -57,7 +57,6 @@ public class HouseManagementService extends HouseManagementImplBase{
             }
         }
 
-
         responseObserver.onNext(simpleAck(s));
         responseObserver.onCompleted();
 
@@ -69,6 +68,7 @@ public class HouseManagementService extends HouseManagementImplBase{
         int sender=request.getId();
 
         String s;
+
         if(request.getId()!= homeID) {//if NOT self removal
             printHigh("HOUSE "+ homeID," trying removal of  "+sender+" from peerTable....");
 
@@ -86,13 +86,11 @@ public class HouseManagementService extends HouseManagementImplBase{
                         complexMeans.remove(sender);
                     }
                 }else
-                    s=s= "peer "+sender+" not present";
+                    s= "peer "+sender+" not present";
             }
 
         }else{
             s="[HOUSE"+ homeID +"] self deletion completed";
-
-
         }
         //testTimeWaster();
 
@@ -103,7 +101,9 @@ public class HouseManagementService extends HouseManagementImplBase{
             stopScheduler();
         }
     }
+    //endregion
 
+    //region MEAN HANDLER
     @Override
     public void sendMeasure(Measure request, StreamObserver<Ack> responseObserver) {
         int sender=request.getSenderID();
@@ -131,14 +131,14 @@ public class HouseManagementService extends HouseManagementImplBase{
         responseObserver.onCompleted();
 
     }
+    //endregion
 
+    //region ELECTION HANDLER
     @Override
     public void election(Coordinator request, StreamObserver<Ack> responseObserver) {
         //testTimeWaster(6);
         responseObserver.onNext(simpleAck(""));
         responseObserver.onCompleted();
-
-
     }
 
     @Override
@@ -149,12 +149,11 @@ public class HouseManagementService extends HouseManagementImplBase{
         responseObserver.onNext(simpleAck("NEW COORDINATOR IS: "+coord));
         responseObserver.onCompleted();
 
-
-
         if(parent.isCoordinator()){
             startScheduler();
         }
     }
+    //endregion
 
     @Override
     public void boostRequest(RequestBoost request, StreamObserver<Ack> responseObserver) {  //todo ad ogni richiesta di boost, chi è in coda viene notificato e fa partire il proprio boost
@@ -173,7 +172,6 @@ public class HouseManagementService extends HouseManagementImplBase{
         responseObserver.onNext(simpleAck("PERMISSION TO BOOST GRANTED"));
         responseObserver.onCompleted();
     }
-
     //endregion
 
     private Ack simpleAck(String text){

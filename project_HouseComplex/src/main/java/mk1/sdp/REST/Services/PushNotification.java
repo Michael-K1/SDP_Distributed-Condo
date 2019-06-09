@@ -19,7 +19,7 @@ public class PushNotification {
     @POST
     @Produces(MediaType.TEXT_PLAIN)
     @Consumes(MediaType.TEXT_PLAIN)
-    public void broadcastEvent( String event){
+    public void broadcastEvent( String event){          //PUBLISH: broadcast push notification to registered listener
         OutboundEvent ev= new OutboundEvent.Builder()
                 .name("from-house-network")
                 .mediaType(MediaType.TEXT_PLAIN_TYPE)
@@ -27,15 +27,16 @@ public class PushNotification {
                 .build();
         broadcaster.broadcast(ev);
 
-        printHigh("server", "broadcasted event: "+event);
-
+        printHigh("server", "broadcast event: "+event);
     }
 
     @GET
     @Produces(SseFeature.SERVER_SENT_EVENTS)
-    public EventOutput broadcastListener(){
+    public EventOutput broadcastListener(){     //SUBSCRIBE: get request to register for event notification
         EventOutput eo=new EventOutput();
         this.broadcaster.add(eo);
+        printHigh("server", "new push notification subscription");
         return eo;
+
     }
 }

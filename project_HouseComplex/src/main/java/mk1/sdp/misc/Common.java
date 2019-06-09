@@ -21,9 +21,14 @@ public class Common {
     public static void printHigh(String who,String s){ System.out.println("["+who.toUpperCase()+"]: "+s.toUpperCase());}
     public static void print(String s){ System.out.println(s);}
     public static void printMeasure(String s,Pair<Long,Double> m){
-        time.setTime(m.left);
-        print(s+" "+formatter.format(time)+"\t--->\t"+m.right+"\tkW");
 
+        print(s+" "+formatTimestamp(m.left)+"\t--->\t"+m.right+"\tkW");
+
+    }
+
+    public static String formatTimestamp(long t){
+        time.setTime(t);
+        return "<"+formatter.format(time)+">";
     }
 
     public static boolean responseHasError(@NotNull Response resp){

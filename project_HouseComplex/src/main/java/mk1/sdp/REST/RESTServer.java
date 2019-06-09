@@ -2,6 +2,7 @@ package mk1.sdp.REST;
 
 import mk1.sdp.REST.Services.ComplexService;
 import mk1.sdp.REST.Services.PushNotification;
+
 import org.glassfish.grizzly.http.server.HttpServer;
 import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory;
 import org.glassfish.jersey.server.ResourceConfig;
@@ -38,12 +39,12 @@ public class RESTServer {
         }
 
         System.out.println("Stopping server");
-        server.stop();
+        server.shutdown();
         System.out.println("Server stopped");
     }
 
     private static HttpServer createServerREST(String address){
-       HttpServer server=null;
+        HttpServer server=null;
         server =GrizzlyHttpServerFactory.createHttpServer(URI.create(address),new ResourceConfig(ComplexService.class, PushNotification.class));
 
         return server;

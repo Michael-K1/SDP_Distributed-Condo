@@ -49,27 +49,16 @@ public class Administrator {
 
         ClientConfig c=new ClientConfig();
         client= ClientBuilder.newClient(c);
-        webTarget=client.target(getBaseURI());
+        webTarget=client.target(getBaseURI(""));
 
-        pushListenerClient= ClientBuilder.newBuilder().register(SseFeature.class).build();
-        pushListenerWT=pushListenerClient.target("http://"+RESTServer.HOST+":"+RESTServer.PORT+"/eventBroadcast");
-        pushSource=EventSource.target(pushListenerWT).build();
-        EventListener listener =  new EventListener() {
-            @Override
-            public void onEvent(InboundEvent inboundEvent) {
-                print(inboundEvent.getName()+": "+inboundEvent.readData(String.class));
-            }
-        };
-        pushSource.register(listener,"from-house-network");
-        pushSource.open();
-
+        registerForPushNotification();
     }
 
-    private URI getBaseURI() {
+    private URI getBaseURI(String path) {
         URI uri=null;
 
         try {
-            uri = new URI("http://"+RESTServer.HOST+":"+RESTServer.PORT+"/");
+            uri = new URI("http://"+RESTServer.HOST+":"+RESTServer.PORT+"/"+path);
         }catch (URISyntaxException e) {
             e.printStackTrace();
         }
@@ -78,7 +67,7 @@ public class Administrator {
 
     private void Menu(){
         int choice=0;
-        registerForPushNotification();
+
         while(true){
             choice=printMenu();
 
@@ -105,27 +94,25 @@ public class Administrator {
         }
     }
 
-    private void registerForPushNotification(int ...retries) {
-        try {
-            pushListenerWT.request(MediaType.SERVER_SENT_EVENTS).get(); //push  listener registration
-        } catch (ProcessingException e) {
-            if (retries.length == 0) {
-                printErr("while registering for push notification.\tretrying");
-                registerForPushNotification(1);
-            } else if (retries[0] <= 5) {
-                printErr("attempt  "+retries[0]+" .\tretrying");
-                registerForPushNotification(retries[0] + 1);
-            } else {
-                printErr("unable to register for push notification");
+    private void registerForPushNotification() {
+        pushListenerClient= ClientBuilder.newBuilder().register(SseFeature.class).build();
+        pushListenerWT=pushListenerClient.target(getBaseURI("eventBroadcast"));
+        pushSource=EventSource.target(pushListenerWT).build();
+        EventListener listener =  new EventListener() {
+            @Override
+            public void onEvent(InboundEvent inboundEvent) {
+                print(inboundEvent.getName()+": "+inboundEvent.readData(String.class));
             }
-        }
+        };
+        pushSource.register(listener,"from-house-network");
+        pushSource.open();
     }
+
     //region REST QUERY
     private void getHouseList() {
 
         WebTarget wt = webTarget.path("complex");
 
-//        Response response= wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).get();
         Response response= obtainResponse(wt);
 
         if(response==null)return;

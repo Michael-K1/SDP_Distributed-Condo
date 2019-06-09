@@ -34,11 +34,8 @@ class MessageDispatcher {
 
     //mutex
     private final LamportClock lampClock;
-
     private boolean usingBoost;
-
     private boolean askingBoost;
-
 
     MessageDispatcher(HousePeer parent, WebTarget server){
         this.parent=parent;
@@ -101,8 +98,6 @@ class MessageDispatcher {
                         }
                     }
                 }
-
-
             }
         };
 
@@ -146,7 +141,7 @@ class MessageDispatcher {
             }
         };
 
-        SyncObj.getInstance().notifier();     //to notify whomever is waiting form "this" in the boost queue
+        SyncObj.getInstance().notifier();     //to notify whomever is waiting for "this" in the boost queue
 
         copy.stream().parallel().forEach(chan->HouseManagementGrpc.newStub(chan).removeHome(selfIntro, respObs));
 //        copy.stream().parallel().forEach(chan->HouseManagementGrpc.newStub(chan).withDeadlineAfter(5, TimeUnit.SECONDS).removeHome(selfIntro, respObs));
@@ -216,7 +211,7 @@ class MessageDispatcher {
                 if(t.getStatus().isOk()) return;
                 printErr("during peer broadcast "+t.getStatus());
 
-                if(t.getMessage().toUpperCase().matches("(.*)DEADLINE_EXCEEDED(.*)")){
+                if(t.getStatus().equals(Status.DEADLINE_EXCEEDED)){
                     printErr("deadline problem detected");
                 }
             }
@@ -238,7 +233,6 @@ class MessageDispatcher {
             }
         };
         copy.stream().parallel().forEach(chan-> HouseManagementGrpc.newStub(chan).sendMeasure(newMean, respObs));
-//        copy.stream().parallel().forEach(chan-> HouseManagementGrpc.newStub(chan).withDeadlineAfter(5, TimeUnit.SECONDS).sendMeasure(newMean, respObs));
 
         lampClock.afterEvent();
     }
@@ -298,7 +292,6 @@ class MessageDispatcher {
                 StatusRuntimeException t=(StatusRuntimeException)throwable;
                 if(t.getStatus().isOk()) return;
                 printErr("during start election " +t.getStatus());
-
 
                 if(t.getStatus().equals(Status.DEADLINE_EXCEEDED)){ //only happens when a message is sent to the previous coordinator, if it hasn't reappeared yet
                     printErr("deadline problem detected: previous coordinator unreachable");
@@ -361,7 +354,7 @@ class MessageDispatcher {
             return;
         }
 
-        pushEvent.request(MediaType.TEXT_PLAIN).post(Entity.entity("BOOST REQUEST FROM: HOUSE "+id,MediaType.TEXT_PLAIN_TYPE));    //push notification: boost request
+        pushEvent.request(MediaType.TEXT_PLAIN).post(Entity.entity("BOOST REQUEST FROM: HOUSE "+id+" "+formatTimestamp(System.currentTimeMillis()),MediaType.TEXT_PLAIN_TYPE));    //push notification: boost request
 
         RequestBoost request=RequestBoost.newBuilder().setRequester(id).setLamportTimestamp(lampClock.peekClock()).build();
 
@@ -393,10 +386,9 @@ class MessageDispatcher {
                         boost();
                     }
                 }
-
-
             }
         };
+
         printHigh("house "+id,"asking the network the permission to boost");
         setAskingBoost(true);
 

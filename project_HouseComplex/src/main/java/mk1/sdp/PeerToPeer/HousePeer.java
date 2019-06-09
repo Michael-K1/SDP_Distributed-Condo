@@ -248,7 +248,7 @@ public class HousePeer {
                 message="REMOVED: HOUSE "+HomeID;
                 resp = wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).delete();
             }
-            pushEvent.request(MediaType.TEXT_PLAIN).post(Entity.entity(message,MediaType.TEXT_PLAIN_TYPE));    //push notification: add/delete
+            pushEvent.request(MediaType.TEXT_PLAIN).post(Entity.entity(message+" "+formatTimestamp(System.currentTimeMillis()),MediaType.TEXT_PLAIN_TYPE));    //push notification: add/delete
 
         }catch (ProcessingException p){
             if(retries.length==0){
@@ -274,7 +274,7 @@ public class HousePeer {
     }
 
     //region GETTER/SETTER
-    int getCoordinator() {
+    synchronized int  getCoordinator() {
         return coordinator;
     }
 
@@ -287,6 +287,7 @@ public class HousePeer {
     MessageDispatcher getMexDispatcher() {
         return mexDispatcher;
     }
+
     SmartMeterSimulator getSimulator(){
         return this.simulator;
     }
@@ -306,7 +307,7 @@ public class HousePeer {
         return copy;
     }
 
-    List<ManagedChannel> getGTPeerListCopy() {   //greater id then this.is
+    List<ManagedChannel> getGTPeerListCopy() {   //greater id then "this" is
         List<ManagedChannel> tmp=new ArrayList<>();
         synchronized (peerTable){
             for (Integer key : peerTable.keySet()) {
@@ -317,16 +318,5 @@ public class HousePeer {
         return tmp;
     }
 
-    public List<ManagedChannel> getSetPeerList(List<Integer> queue){
-        List<ManagedChannel> copy=new ArrayList<>(queue.size());
-        synchronized (peerTable){
-            for (Integer key : queue) {
-                if(peerTable.containsKey(key))
-                    copy.add(peerTable.get(key));
-            }
-        }
-
-        return copy;
-    }
     //endregion
 }
