@@ -13,7 +13,7 @@ import javax.ws.rs.core.MediaType;
 
 @Singleton
 @Path("/eventBroadcast")
-public class PushNotification {
+public class PushNotificationService {
     private SseBroadcaster broadcaster=new SseBroadcaster();
 
     @POST
@@ -32,7 +32,7 @@ public class PushNotification {
 
     @GET
     @Produces(SseFeature.SERVER_SENT_EVENTS)
-    public EventOutput broadcastListener(){     //SUBSCRIBE: get request to register for event notification
+    public EventOutput addListener(){     //SUBSCRIBE: get request to register for event notification
         EventOutput eo=new EventOutput();
         this.broadcaster.add(eo);
         printHigh("server", "new push notification subscription");

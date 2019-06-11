@@ -1,7 +1,7 @@
 package mk1.sdp.REST;
 
 import mk1.sdp.REST.Services.ComplexService;
-import mk1.sdp.REST.Services.PushNotification;
+import mk1.sdp.REST.Services.PushNotificationService;
 
 import org.glassfish.grizzly.http.server.HttpServer;
 import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory;
@@ -45,7 +45,7 @@ public class RESTServer {
 
     private static HttpServer createServerREST(String address){
         HttpServer server=null;
-        server =GrizzlyHttpServerFactory.createHttpServer(URI.create(address),new ResourceConfig(ComplexService.class, PushNotification.class));
+        server =GrizzlyHttpServerFactory.createHttpServer(URI.create(address),new ResourceConfig(ComplexService.class, PushNotificationService.class));
 
         return server;
     }

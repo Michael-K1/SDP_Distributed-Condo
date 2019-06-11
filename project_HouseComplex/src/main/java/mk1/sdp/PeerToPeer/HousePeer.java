@@ -248,7 +248,7 @@ public class HousePeer {
                 message="REMOVED: HOUSE "+HomeID;
                 resp = wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).delete();
             }
-            pushEvent.request(MediaType.TEXT_PLAIN).post(Entity.entity(message+" "+formatTimestamp(System.currentTimeMillis()),MediaType.TEXT_PLAIN_TYPE));    //push notification: add/delete
+            pushEvent.request(MediaType.TEXT_PLAIN).post(Entity.entity(formatTimestamp(System.currentTimeMillis())+" "+message+"\t",MediaType.TEXT_PLAIN_TYPE));    //push notification: add/delete
 
         }catch (ProcessingException p){
             if(retries.length==0){

@@ -39,7 +39,6 @@ public class Complex {
     //POST
     public synchronized boolean addHouse (Home h) {                      //synced to avoid double insertion attempt
 
-
         if (complex.containsKey(h.HomeID)) {
             return false;
         }
@@ -49,9 +48,6 @@ public class Complex {
 
         } else{
             complex.put(h.HomeID, h);
-
-
-
         }
         return complex.containsKey(h.HomeID);               //check if the insertion has been completed
     }
@@ -75,8 +71,6 @@ public class Complex {
 
     //PUT
     public synchronized boolean addGlobalStat(Pair<Long,Double> measure){
-
-
          complexStat.add(measure);
          return complexStat.contains(measure);
     }

@@ -1,8 +1,5 @@
 package mk1.sdp.REST.Resources;
 
-
-
-
 import mk1.sdp.misc.Pair;
 
 import java.util.ArrayList;
@@ -13,7 +10,7 @@ public class Home {
     public String address;
     public int listeningPort;
 
-    private  List<Pair<Long,Double>> measureList; //pair: left=timestampFromMidnight, right=measure
+    private final  List<Pair<Long,Double>> measureList; //pair: left=timestampFromMidnight, right=measure
 
     public Home(){
         measureList= new ArrayList<>();
@@ -30,13 +27,12 @@ public class Home {
         this(h.HomeID,h.address,h.listeningPort);
     }
 
-    public synchronized boolean AddMeasure(Pair<Long,Double> m){
+    synchronized boolean AddMeasure(Pair<Long, Double> m){
         measureList.add(m);
         return measureList.contains(m);
     }
 
-
-    public ArrayList<Pair<Long,Double>> getLastN(int n){
+    ArrayList<Pair<Long,Double>> getLastN(int n){
         List<Pair<Long,Double>> copy;
         synchronized (measureList){
             copy= new ArrayList<>(measureList);
@@ -44,11 +40,4 @@ public class Home {
 
         return new ArrayList<>(copy.subList(copy.size() - Math.min(copy.size(), n), copy.size()));   //the minimum between n and list.size() --> if n >list.size there would be IndexOutOfBoundException
     }
-
-    public void eraseMeasurementList(){
-        measureList=null;
-    }
-
-
-
 }

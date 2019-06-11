@@ -1,6 +1,6 @@
 package mk1.sdp.REST;
 
-
+import static mk1.sdp.misc.Common.*;
 import mk1.sdp.REST.Resources.Complex;
 import mk1.sdp.REST.Resources.Home;
 import mk1.sdp.misc.Pair;
@@ -11,7 +11,6 @@ import org.glassfish.jersey.media.sse.EventSource;
 import org.glassfish.jersey.media.sse.InboundEvent;
 import org.glassfish.jersey.media.sse.SseFeature;
 
-
 import javax.ws.rs.ProcessingException;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
@@ -19,23 +18,17 @@ import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-
 import java.net.URI;
 
 import java.net.URISyntaxException;
 
 import java.util.*;
 
-
-import static mk1.sdp.misc.Common.*;
-//https://jersey.github.io/apidocs/2.25.1/jersey/index.html
-
 public class Administrator {
     private Client client=null;
     private WebTarget webTarget;
     private Scanner fromShell;
     private Client pushListenerClient;
-    private WebTarget pushListenerWT;
     private EventSource pushSource;
 
     public static void main (String[] args){
@@ -95,8 +88,9 @@ public class Administrator {
     }
 
     private void registerForPushNotification() {
+
         pushListenerClient= ClientBuilder.newBuilder().register(SseFeature.class).build();
-        pushListenerWT=pushListenerClient.target(getBaseURI("eventBroadcast"));
+        WebTarget pushListenerWT = pushListenerClient.target(getBaseURI("eventBroadcast"));
         pushSource=EventSource.target(pushListenerWT).build();
         EventListener listener =  new EventListener() {
             @Override

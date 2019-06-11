@@ -148,10 +148,6 @@ public class HouseManagementService extends HouseManagementImplBase{
         //testTimeWaster(6);
         responseObserver.onNext(simpleAck("NEW COORDINATOR IS: "+coord));
         responseObserver.onCompleted();
-
-        if(parent.isCoordinator()){
-            startScheduler();
-        }
     }
     //endregion
 
@@ -166,7 +162,13 @@ public class HouseManagementService extends HouseManagementImplBase{
         while(mexDispatcher.isInBoost() || (mexDispatcher.isAskingBoost() && lampClock.before(otherClock))){
             // wait for boost to end
             printRED("add "+sender+" to boost queue");
-            SyncObj.getInstance().waiter(5);
+            SyncObj.getInstance().waiter(6);
+
+            /*could trigger print of
+            *   io.grpc.netty.NettyServerTransport notifyTerminated INFO: Transport failed
+            * when "this" has to notify a peer who got out of the network
+            * */
+
         }
 
         responseObserver.onNext(simpleAck("PERMISSION TO BOOST GRANTED"));
@@ -177,7 +179,13 @@ public class HouseManagementService extends HouseManagementImplBase{
     private Ack simpleAck(String text){
         lampClock.afterEvent();
         synchronized (parent) {
-            return Ack.newBuilder().setAck(true).setCoordinator(parent.getCoordinator()).setMessage("[REMOTE "+homeID+"] "+text).setLamportTimestamp(lampClock.peekClock()).setSender(homeID).build();
+            return Ack.newBuilder()
+                    .setAck(true)
+                    .setCoordinator(parent.getCoordinator())
+                    .setMessage("[REMOTE "+homeID+"] "+text)
+                    .setLamportTimestamp(lampClock.peekClock())
+                    .setSender(homeID)
+                    .build();
         }
     }
 

@@ -14,16 +14,14 @@ public class Common {
     private static Timestamp time =new Timestamp(System.currentTimeMillis());
     private static SimpleDateFormat formatter=new SimpleDateFormat("dd/MM/yyyy hh:mm:ss a");
 
-    public static void printErr(String s){ printRED("[ERROR]: "+s+"...");}
+    public static void print(String s){ System.out.println(s);}
     public static void printRED(String s){
         System.err.println(s.toUpperCase());
     }
-    public static void printHigh(String who,String s){ System.out.println("["+who.toUpperCase()+"]: "+s.toUpperCase());}
-    public static void print(String s){ System.out.println(s);}
+    public static void printErr(String s){ printRED("[ERROR]: "+s+"...");}
+    public static void printHigh(String who,String s){ print("["+who.toUpperCase()+"]: "+s.toUpperCase());}
     public static void printMeasure(String s,Pair<Long,Double> m){
-
-        print(s+" "+formatTimestamp(m.left)+"\t--->\t"+m.right+"\tkW");
-
+        print(s+" "+formatTimestamp(m.left)+"\t--->\t"+String.format("%1.17f", m.right)+"\tkW");
     }
 
     public static String formatTimestamp(long t){
