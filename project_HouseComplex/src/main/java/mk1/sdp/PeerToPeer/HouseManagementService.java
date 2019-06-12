@@ -155,14 +155,16 @@ public class HouseManagementService extends HouseManagementImplBase{
     public void boostRequest(RequestBoost request, StreamObserver<Ack> responseObserver) {  //todo ad ogni richiesta di boost, chi è in coda viene notificato e fa partire il proprio boost
         int sender=request.getRequester();
         Pair<Integer, Integer> otherClock = Pair.of(sender, request.getLamportTimestamp());
-
+        boolean printOnce=true;
         if(homeID!=sender)
             printHigh("house "+homeID, sender+" requested to boost");
 
         while(mexDispatcher.isInBoost() || (mexDispatcher.isAskingBoost() && lampClock.before(otherClock))){
-            // wait for boost to end
-            printRED("add "+sender+" to boost queue");
-            SyncObj.getInstance().waiter(6);
+           if(printOnce) {
+               printRED("add " + sender + " to boost queue");
+               printOnce=false;
+           }
+           SyncObj.getInstance().waiter(6);
 
             /*could trigger print of
             *   io.grpc.netty.NettyServerTransport notifyTerminated INFO: Transport failed

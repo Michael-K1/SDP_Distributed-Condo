@@ -19,7 +19,7 @@ public class PeerServer implements Runnable{
 
     public PeerServer(HousePeer parent){
         this.id=parent.HomeID;
-        this.address=parent.host;
+        this.address=parent.address;
         this.port=parent.port;
         this.parent=parent;
         server= ServerBuilder.forPort(this.port).addService(new HouseManagementService(parent)).build();

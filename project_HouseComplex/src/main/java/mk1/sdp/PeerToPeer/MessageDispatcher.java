@@ -41,7 +41,7 @@ class MessageDispatcher {
         this.parent=parent;
         synchronized (this.parent){
             this.id=parent.HomeID;
-            this.address=parent.host;
+            this.address=parent.address;
             this.port=parent.port;
             this.lampClock=parent.lamportClock;
         }
@@ -248,7 +248,6 @@ class MessageDispatcher {
     private boolean sendToServer(WebTarget wt, Pair<Long, Double> measure, int ...retries) {
         Response resp=null;
         try {
-            //print(wt.getUri().getPath());
              resp = wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).put(Entity.entity(measure, MediaType.APPLICATION_JSON_TYPE));
         }catch (ProcessingException e){
             if(retries.length==0){
@@ -353,6 +352,11 @@ class MessageDispatcher {
 
         if(isInBoost()) {
             printErr("already in boost mode");
+            return;
+        }
+
+        if(isAskingBoost()){
+            printErr("boost already requested");
             return;
         }
 

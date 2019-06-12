@@ -27,7 +27,7 @@ import java.util.concurrent.TimeUnit;
 
 public class HousePeer {
     final int HomeID;
-    final String host;
+    final String address;
     final int port;
     private final String hostServer;
     private int coordinator=-1;
@@ -58,7 +58,7 @@ public class HousePeer {
 
     private HousePeer(int ID,String host,int port, String hostServer){
         this.HomeID =ID;
-        this.host=host;
+        this.address =host;
         this.port=port;
         this.hostServer=hostServer;
         peerTable = new Hashtable<>();
@@ -243,7 +243,7 @@ public class HousePeer {
         try {
             if(registration) {
                 message="REGISTERED: HOUSE "+HomeID;
-                resp = wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).post(Entity.entity(new Home(HomeID, host, port), MediaType.APPLICATION_JSON_TYPE));
+                resp = wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).post(Entity.entity(new Home(HomeID, address, port), MediaType.APPLICATION_JSON_TYPE));
             }else {//remotion
                 message="REMOVED: HOUSE "+HomeID;
                 resp = wt.request(MediaType.APPLICATION_JSON).header("content-type", MediaType.APPLICATION_JSON).delete();
