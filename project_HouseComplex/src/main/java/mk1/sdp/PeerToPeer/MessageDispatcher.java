@@ -123,7 +123,7 @@ class MessageDispatcher {
                 StatusRuntimeException t=(StatusRuntimeException)throwable;
                 if(t.getStatus().isOk()) return;
                 printErr("Async self deletion "+ t.getMessage());
-                // throwable.printStackTrace();
+
                 if(t.getMessage().toUpperCase().matches("(.*)DEADLINE_EXCEEDED(.*)")){
                     printErr("deadline problem detected while removing self");
                 }
