@@ -37,27 +37,31 @@ public class Complex {
     //region REST REQUEST
 
     //POST
-    public synchronized boolean addHouse (Home h) {                      //synced to avoid double insertion attempt
+    public boolean addHouse (Home h) {                      //synced to avoid double insertion attempt
 
-        if (complex.containsKey(h.HomeID)) {
-            return false;
+        synchronized (complex) {
+
+            if (complex.containsKey(h.HomeID)) {
+                return false;
+            }
+
+            if (suspendedHouse.containsKey(h.HomeID)) {
+                complex.put(h.HomeID, suspendedHouse.remove(h.HomeID));
+
+            } else {
+                complex.put(h.HomeID, h);
+            }
+            return complex.containsKey(h.HomeID);               //check if the insertion has been completed
         }
-
-        if (suspendedHouse.containsKey(h.HomeID)) {
-            complex.put(h.HomeID, suspendedHouse.remove(h.HomeID));
-
-        } else{
-            complex.put(h.HomeID, h);
-        }
-        return complex.containsKey(h.HomeID);               //check if the insertion has been completed
     }
 
     //DELETE
-    public synchronized boolean deleteHouse(int id){                    //synced to avoid concurrent access while deleting a house
-        suspendedHouse.put(id,complex.remove(id));
-       // complex.remove(id);
+    public boolean deleteHouse(int id){                    //synced to avoid concurrent access while deleting a house
+        synchronized (complex) {
+            suspendedHouse.put(id, complex.remove(id));
 
-        return !complex.containsKey(id);
+            return !complex.containsKey(id);
+        }
     }
 
     //PUT
@@ -70,9 +74,11 @@ public class Complex {
     }
 
     //PUT
-    public synchronized boolean addGlobalStat(Pair<Long,Double> measure){
-         complexStat.add(measure);
-         return complexStat.contains(measure);
+    public boolean addGlobalStat(Pair<Long,Double> measure){
+         synchronized (complex) {
+             complexStat.add(measure);
+             return complexStat.contains(measure);
+         }
     }
     //GET
     public Home getHouse(int id){
@@ -82,10 +88,12 @@ public class Complex {
     }
 
     //GET
-    public synchronized List<Pair<Long,Double>> getLastLocalStat(int ID, int n){  //synced to avoid deletion or insertion attempt while retreaving the list of statistics
-        if(!complex.containsKey(ID)) return null;
+    public List<Pair<Long,Double>> getLastLocalStat(int ID, int n){  //synced to avoid deletion or insertion attempt while retreaving the list of statistics
+        synchronized (complex) {
+            if (!complex.containsKey(ID)) return null;
 
-        return complex.get(ID).getLastN(n);
+            return complex.get(ID).getLastN(n);
+        }
 
     }
 

@@ -27,9 +27,11 @@ public class Home {
         this(h.HomeID,h.address,h.listeningPort);
     }
 
-    synchronized boolean AddMeasure(Pair<Long, Double> m){
-        measureList.add(m);
-        return measureList.contains(m);
+    boolean AddMeasure(Pair<Long, Double> m){
+        synchronized (measureList) {
+            measureList.add(m);
+            return measureList.contains(m);
+        }
     }
 
     ArrayList<Pair<Long,Double>> getLastN(int n){

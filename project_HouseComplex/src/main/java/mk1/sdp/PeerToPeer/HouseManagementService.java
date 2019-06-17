@@ -152,7 +152,7 @@ public class HouseManagementService extends HouseManagementImplBase{
     //endregion
 
     @Override
-    public void boostRequest(RequestBoost request, StreamObserver<Ack> responseObserver) {  //todo ad ogni richiesta di boost, chi è in coda viene notificato e fa partire il proprio boost
+    public void boostRequest(RequestBoost request, StreamObserver<Ack> responseObserver) {
         int sender=request.getRequester();
         Pair<Integer, Integer> otherClock = Pair.of(sender, request.getLamportTimestamp());
         boolean printOnce=true;
